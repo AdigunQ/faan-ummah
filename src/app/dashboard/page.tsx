@@ -8,7 +8,7 @@ import { MemberDashboard } from '@/components/dashboard/member-dashboard'
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
 
-  if (!session) {
+  if (!session?.user?.email) {
     redirect('/login')
   }
 
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  if (session.user.role === 'ADMIN') {
+  if (session.user?.role === 'ADMIN') {
     // Get admin stats
     const [
       totalMembers,
