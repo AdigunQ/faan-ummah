@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate PWA Icons</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    canvas { border: 1px solid #ccc; margin: 10px; }
+    .icon-row { display: flex; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <h1>Cooperative Loan App - PWA Icons</h1>
+  <p>Right-click each icon and "Save Image As" to download</p>
+  
+  <div class="icon-row" id="icons"></div>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    const iconsContainer = document.getElementById('icons');
+    
+    sizes.forEach(size => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      
+      // Background
+      ctx.fillStyle = '#1a5f2a';
+      ctx.fillRect(0, 0, size, size);
+      
+      // Handshake icon representation (simplified)
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `${size * 0.5}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🤝', size/2, size/2);
+      
+      // Add label
+      const wrapper = document.createElement('div');
+      wrapper.style.textAlign = 'center';
+      wrapper.style.margin = '10px';
+      
+      const label = document.createElement('p');
+      label.textContent = `${size}x${size}`;
+      
+      wrapper.appendChild(canvas);
+      wrapper.appendChild(label);
+      iconsContainer.appendChild(wrapper);
+    });
+  </script>
+  
+  <h2>Instructions:</h2>
+  <ol>
+    <li>Right-click each icon above</li>
+    <li>Select "Save Image As..."</li>
+    <li>Save as: icon-{size}x{size}.png (e.g., icon-72x72.png)</li>
+    <li>Place all files in /public/icons/ folder</li>
+  </ol>
+</body>
+</html>
