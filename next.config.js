@@ -60,12 +60,11 @@ const withPWA = require('next-pwa')({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
   images: {
     domains: ['res.cloudinary.com'],
+    unoptimized: true, // Required for static export
   },
+  output: 'standalone', // Optimize for Railway
 }
 
 module.exports = withPWA(nextConfig)
