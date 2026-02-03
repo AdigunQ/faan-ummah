@@ -5,7 +5,7 @@ echo "🗄️  Setting up database..."
 npx prisma db push --accept-data-loss
 
 echo "🌱  Seeding database..."
-npx prisma db seed || true
+npx tsx prisma/seed.ts || true
 
 echo "🚀  Starting app..."
 exec npm start
