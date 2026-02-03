@@ -10,14 +10,15 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const session = await getServerSession(authOptions)
+  const email = session?.user?.email
 
-  if (!session?.user?.email) {
+  if (!email) {
     redirect('/login')
   }
 
   // Get fresh user data
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { email },
     select: {
       id: true,
       name: true,

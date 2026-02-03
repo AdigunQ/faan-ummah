@@ -7,14 +7,15 @@ import { MemberDashboard } from '@/components/dashboard/member-dashboard'
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
+  const email = session?.user?.email
 
-  if (!session?.user?.email) {
+  if (!email) {
     redirect('/login')
   }
 
   // Get user data
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { email },
     include: {
       payments: {
         orderBy: { createdAt: 'desc' },
