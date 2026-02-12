@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { DashboardNav } from '@/components/dashboard/nav'
 import { prisma } from '@/lib/prisma'
+import { autoPostMonthEndIfDue } from '@/lib/payroll'
 
 export default async function DashboardLayout({
   children,
@@ -32,6 +33,10 @@ export default async function DashboardLayout({
 
   if (!user) {
     redirect('/login')
+  }
+
+  if (user.role === 'ADMIN') {
+    await autoPostMonthEndIfDue()
   }
 
   return (

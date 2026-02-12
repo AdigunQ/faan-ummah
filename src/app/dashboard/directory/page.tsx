@@ -1,8 +1,42 @@
 import { getServerSession } from 'next-auth/next'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import Link from 'next/link'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency, formatDate } from '@/lib/utils'
+
+async function updateMemberLedger(formData: FormData) {
+  'use server'
+
+  const session = await getServerSession(authOptions)
+  if (session?.user?.role !== 'ADMIN') redirect('/dashboard')
+
+  const userId = String(formData.get('userId') || '')
+  const monthlyContribution = Number(formData.get('monthlyContribution') || 0)
+  const balance = Number(formData.get('balance') || 0)
+  const loanBalance = Number(formData.get('loanBalance') || 0)
+  const status = String(formData.get('status') || 'ACTIVE')
+
+  if (!userId) return
+  if (!Number.isFinite(monthlyContribution) || monthlyContribution < 0) return
+  if (!Number.isFinite(balance) || balance < 0) return
+  if (!Number.isFinite(loanBalance) || loanBalance < 0) return
+  if (!['PENDING', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'CLOSED'].includes(status)) return
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      monthlyContribution,
+      balance,
+      loanBalance,
+      status: status as 'PENDING' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED' | 'CLOSED',
+    },
+  })
+
+  revalidatePath('/dashboard/directory')
+  revalidatePath('/dashboard')
+}
 
 export default async function DirectoryPage() {
   const session = await getServerSession(authOptions)
@@ -78,13 +112,19 @@ export default async function DirectoryPage() {
               <HeadCell label="Loan Balance" />
               <HeadCell label="Activity" />
               <HeadCell label="Joined" />
+              <HeadCell label="Manual Update" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {members.map((member) => (
               <tr key={member.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
-                  <p className="font-semibold text-gray-900">{member.name || 'Unnamed Member'}</p>
+                  <Link
+                    href={`/dashboard/directory/${member.id}`}
+                    className="font-semibold text-gray-900 underline-offset-2 hover:underline"
+                  >
+                    {member.name || 'Unnamed Member'}
+                  </Link>
                   <p className="text-sm text-gray-500">{member.email}</p>
                 </td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-800">{member.staffId || 'N/A'}</td>
@@ -107,6 +147,55 @@ export default async function DirectoryPage() {
                   {member._count.payments} payments · {member._count.loans} loans
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">{formatDate(member.createdAt)}</td>
+                <td className="px-6 py-4">
+                  <form action={updateMemberLedger} className="grid w-[340px] grid-cols-2 gap-2">
+                    <input type="hidden" name="userId" value={member.id} />
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      name="monthlyContribution"
+                      defaultValue={member.monthlyContribution || 0}
+                      className="rounded border border-gray-300 px-2 py-1 text-xs"
+                      title="Monthly savings"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      name="balance"
+                      defaultValue={member.balance}
+                      className="rounded border border-gray-300 px-2 py-1 text-xs"
+                      title="Savings balance"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      name="loanBalance"
+                      defaultValue={member.loanBalance}
+                      className="rounded border border-gray-300 px-2 py-1 text-xs"
+                      title="Loan balance"
+                    />
+                    <select
+                      name="status"
+                      defaultValue={member.status}
+                      className="rounded border border-gray-300 px-2 py-1 text-xs"
+                    >
+                      <option value="PENDING">PENDING</option>
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="REJECTED">REJECTED</option>
+                      <option value="SUSPENDED">SUSPENDED</option>
+                      <option value="CLOSED">CLOSED</option>
+                    </select>
+                    <button
+                      type="submit"
+                      className="col-span-2 rounded bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-black"
+                    >
+                      Save
+                    </button>
+                  </form>
+                </td>
               </tr>
             ))}
           </tbody>
