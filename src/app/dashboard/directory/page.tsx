@@ -92,8 +92,8 @@ export default async function DirectoryPage({
   return (
     <div className="animate-fadeIn space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Member Directory</h1>
-        <p className="mt-1 text-gray-500">Complete member profiles, balances, and contribution activity.</p>
+        <h1 className="text-3xl font-bold text-gray-900">Update Member</h1>
+        <p className="mt-1 text-gray-500">Search members and manually correct their savings, loans, or status.</p>
       </div>
 
       {searchParams?.saved && (
