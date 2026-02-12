@@ -20,14 +20,12 @@ async function updateMemberRecord(formData: FormData) {
   const monthlyContribution = Number(formData.get('monthlyContribution') || 0)
   const balance = Number(formData.get('balance') || 0)
   const loanBalance = Number(formData.get('loanBalance') || 0)
-  const status = String(formData.get('status') || 'ACTIVE')
   const voucherEnabled = String(formData.get('voucherEnabled') || 'true') === 'true'
 
   if (!memberId) return
   if (!Number.isFinite(monthlyContribution) || monthlyContribution < 0) return
   if (!Number.isFinite(balance) || balance < 0) return
   if (!Number.isFinite(loanBalance) || loanBalance < 0) return
-  if (!['PENDING', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'CLOSED'].includes(status)) return
 
   await prisma.user.update({
     where: { id: memberId },
@@ -35,9 +33,7 @@ async function updateMemberRecord(formData: FormData) {
       monthlyContribution,
       balance,
       loanBalance,
-      status: status as 'PENDING' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED' | 'CLOSED',
       voucherEnabled,
-      closureDate: status === 'CLOSED' ? new Date() : null,
     },
   })
 
@@ -80,6 +76,7 @@ export default async function MemberProfileEditorPage({
   })
 
   if (!member) redirect('/dashboard/directory')
+  const justSaved = searchParams?.saved === '1'
 
   return (
     <div className="animate-fadeIn space-y-8">
@@ -114,6 +111,7 @@ export default async function MemberProfileEditorPage({
           <p><span className="font-medium text-gray-800">Current Savings:</span> {formatCurrency(member.balance)}</p>
           <p><span className="font-medium text-gray-800">Current Loan Balance:</span> {formatCurrency(member.loanBalance)}</p>
           <p><span className="font-medium text-gray-800">Total Contributions:</span> {formatCurrency(member.totalContributions)}</p>
+          <p><span className="font-medium text-gray-800">Status:</span> {member.status}</p>
         </div>
       </div>
 
@@ -159,21 +157,6 @@ export default async function MemberProfileEditorPage({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Account Status</label>
-            <select
-              name="status"
-              defaultValue={member.status}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
-            >
-              <option value="PENDING">PENDING</option>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="REJECTED">REJECTED</option>
-              <option value="SUSPENDED">SUSPENDED</option>
-              <option value="CLOSED">CLOSED</option>
-            </select>
-          </div>
-
-          <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Include in Voucher</label>
             <select
               name="voucherEnabled"
@@ -188,9 +171,11 @@ export default async function MemberProfileEditorPage({
           <div className="md:col-span-2">
             <button
               type="submit"
-              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black"
+              className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${
+                justSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-900 hover:bg-black'
+              }`}
             >
-              Save Manual Update
+              Save
             </button>
           </div>
         </form>

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { cn, formatCurrency, formatDate } from '@/lib/utils'
 
 type SearchParams = {
   saved?: string
@@ -20,13 +20,11 @@ async function updateMemberLedger(formData: FormData) {
   const monthlyContribution = Number(formData.get('monthlyContribution') || 0)
   const balance = Number(formData.get('balance') || 0)
   const loanBalance = Number(formData.get('loanBalance') || 0)
-  const status = String(formData.get('status') || 'ACTIVE')
 
   if (!userId) return
   if (!Number.isFinite(monthlyContribution) || monthlyContribution < 0) return
   if (!Number.isFinite(balance) || balance < 0) return
   if (!Number.isFinite(loanBalance) || loanBalance < 0) return
-  if (!['PENDING', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'CLOSED'].includes(status)) return
 
   await prisma.user.update({
     where: { id: userId },
@@ -34,7 +32,6 @@ async function updateMemberLedger(formData: FormData) {
       monthlyContribution,
       balance,
       loanBalance,
-      status: status as 'PENDING' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED' | 'CLOSED',
     },
   })
 
@@ -88,12 +85,13 @@ export default async function DirectoryPage({
   const activeCount = members.filter((member) => member.status === 'ACTIVE').length
   const pendingCount = members.filter((member) => member.status === 'PENDING').length
   const savedMember = searchParams?.saved ? members.find((m) => m.id === searchParams.saved) : undefined
+  const savedMemberId = searchParams?.saved || ''
 
   return (
     <div className="animate-fadeIn space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Update Member</h1>
-        <p className="mt-1 text-gray-500">Search members and manually correct their savings, loans, or status.</p>
+        <p className="mt-1 text-gray-500">Search members and manually correct their savings or loan records.</p>
       </div>
 
       {searchParams?.saved && (
@@ -132,8 +130,11 @@ export default async function DirectoryPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {members.map((member) => (
-              <tr key={member.id} className="hover:bg-gray-50">
+            {members.map((member) => {
+              const justSaved = member.id === savedMemberId
+
+              return (
+                <tr key={member.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
                   <Link
                     href={`/dashboard/directory/${member.id}`}
@@ -190,30 +191,26 @@ export default async function DirectoryPage({
                       step={1}
                       name="loanBalance"
                       defaultValue={member.loanBalance}
-                      className="rounded border border-gray-300 px-2 py-1 text-xs"
+                      className="col-span-2 rounded border border-gray-300 px-2 py-1 text-xs"
                       title="Loan balance"
                     />
-                    <select
-                      name="status"
-                      defaultValue={member.status}
-                      className="rounded border border-gray-300 px-2 py-1 text-xs"
-                    >
-                      <option value="PENDING">PENDING</option>
-                      <option value="ACTIVE">ACTIVE</option>
-                      <option value="REJECTED">REJECTED</option>
-                      <option value="SUSPENDED">SUSPENDED</option>
-                      <option value="CLOSED">CLOSED</option>
-                    </select>
                     <button
                       type="submit"
-                      className="col-span-2 rounded bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-black"
+                      className={cn(
+                        'col-span-2 rounded px-3 py-1.5 text-xs font-semibold text-white transition-colors',
+                        justSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-900 hover:bg-black'
+                      )}
                     >
                       Save
                     </button>
+                    {justSaved && (
+                      <div className="col-span-2 text-xs font-medium text-emerald-700">Saved.</div>
+                    )}
                   </form>
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       </div>
