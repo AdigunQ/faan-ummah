@@ -58,7 +58,7 @@ const memberNavItems = [
   { href: '/dashboard', label: 'My Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/profile', label: 'Profile', icon: Settings },
   { href: '/dashboard/pay', label: 'Make Payment', icon: Wallet },
-  { href: '/dashboard/withdrawals', label: 'Withdraw Savings', icon: ArrowDownUp },
+  { href: '/dashboard/withdrawals', label: 'Withdraw', icon: ArrowDownUp },
   { href: '/dashboard/commodity', label: 'Commodity Request', icon: ShoppingBag },
   { href: '/dashboard/apply-loan', label: 'Apply for Loan', icon: HandCoins },
   { href: '/dashboard/my-loans', label: 'My Loans', icon: FileText },

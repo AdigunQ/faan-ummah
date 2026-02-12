@@ -472,31 +472,24 @@ export default async function WithdrawalsPage() {
   return (
     <div className="animate-fadeIn space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Withdraw Savings</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Withdraw Funds</h1>
         <p className="mt-1 text-gray-500">
-          Request one-time partial withdrawal payment (up to 70% of your savings).
+          Request a withdrawal from your savings account.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <MetricCard label="Current Savings" value={formatCurrency(member.balance)} tone="blue" />
-        <MetricCard label="Partial Max (70%)" value={formatCurrency(maxPartialAmount)} tone="green" />
-        <MetricCard
-          label="Partial Withdrawal Status"
-          value={partialAllowed ? 'Available' : 'Used/Unavailable'}
-          tone="amber"
-        />
+        <MetricCard label="Available to Withdraw" value={formatCurrency(maxPartialAmount)} tone="green" />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">New Withdrawal Request</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Partial withdrawal is allowed once for active members. For full account withdrawal, use Delete Account in the menu.
-          </p>
+          <h2 className="text-lg font-semibold text-gray-900">Request Withdrawal</h2>
+          
           {member.loanBalance > 0 && (
             <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-              Outstanding loan detected ({formatCurrency(member.loanBalance)}). Settle loan first before any full membership withdrawal request.
+              Outstanding loan detected ({formatCurrency(member.loanBalance)}). Please note withdrawal limits apply.
             </p>
           )}
 
@@ -509,25 +502,25 @@ export default async function WithdrawalsPage() {
                 min={1}
                 max={Math.floor(maxPartialAmount)}
                 step={1}
-                placeholder="Enter amount for partial request"
+                placeholder="Enter amount"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
                 required
               />
-              <p className="mt-1 text-xs text-gray-500">Maximum allowed: {formatCurrency(maxPartialAmount)} (70% of your savings).</p>
+              <p className="mt-1 text-xs text-gray-500">Limit: {formatCurrency(maxPartialAmount)}</p>
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Payout Account Choice</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Payout Account</label>
               <select
                 name="useProfileBank"
                 defaultValue="yes"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
               >
-                <option value="yes">Use bank account in my profile</option>
-                <option value="no">Use another bank account</option>
+                <option value="yes">Use Saved Bank Account</option>
+                <option value="no">Use Different Account</option>
               </select>
               <p className="mt-1 text-xs text-gray-500">
-                Profile bank: {member.bankName || 'N/A'} / {member.bankAccountNumber || 'N/A'} / {member.bankAccountName || 'N/A'}
+                {member.bankName || 'No bank saved'} • {member.bankAccountNumber ? `****${member.bankAccountNumber.slice(-4)}` : ''}
               </p>
             </div>
 
@@ -535,29 +528,29 @@ export default async function WithdrawalsPage() {
               <input
                 name="payoutBankName"
                 type="text"
-                placeholder="New bank name (optional)"
+                placeholder="Bank Name"
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
               />
               <input
                 name="payoutAccountNumber"
                 type="text"
-                placeholder="New account number (optional)"
+                placeholder="Account No"
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
               />
               <input
                 name="payoutAccountName"
                 type="text"
-                placeholder="New account name (optional)"
+                placeholder="Account Name"
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Reason</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Reason (Optional)</label>
               <textarea
                 name="reason"
-                rows={3}
-                placeholder="Tell admin why you are making this request"
+                rows={2}
+                placeholder="Brief reason for withdrawal"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
               />
             </div>
@@ -566,17 +559,17 @@ export default async function WithdrawalsPage() {
               type="submit"
               className="w-full rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
             >
-              Submit Withdrawal Request
+              Submit Request
             </button>
           </form>
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-6 py-4">
-            <h2 className="text-lg font-semibold text-gray-900">My Withdrawal History</h2>
+            <h2 className="text-lg font-semibold text-gray-900">History</h2>
           </div>
           {member.withdrawals.length === 0 ? (
-            <div className="px-6 py-8 text-center text-gray-500">No withdrawal requests yet.</div>
+            <div className="px-6 py-8 text-center text-gray-500">No requests found.</div>
           ) : (
             <div className="divide-y divide-gray-200">
               {member.withdrawals.map((request) => (
@@ -584,14 +577,9 @@ export default async function WithdrawalsPage() {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-sm font-semibold text-gray-900">
-                        {request.type === 'PARTIAL' ? 'Partial Withdrawal' : 'Full Discontinuation'}
+                        Withdrawal Request
                       </p>
-                      <p className="text-xs text-gray-500">Requested: {formatDateTime(request.requestedAt)}</p>
-                      {request.reviewedAt && (
-                        <p className="text-xs text-gray-500">
-                          Reviewed: {formatDateTime(request.reviewedAt)} by {request.reviewedBy || 'Admin'}
-                        </p>
-                      )}
+                      <p className="text-xs text-gray-500">{formatDateTime(request.requestedAt)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-900">
@@ -600,7 +588,6 @@ export default async function WithdrawalsPage() {
                       <StatusBadge status={request.status} />
                     </div>
                   </div>
-                  {request.reason && <p className="mt-1 text-xs text-gray-500">{request.reason}</p>}
                 </div>
               ))}
             </div>
