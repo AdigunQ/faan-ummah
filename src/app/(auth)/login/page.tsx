@@ -17,6 +17,20 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>
 
+function getLoginErrorMessage(error?: string | null) {
+  if (!error || error === 'undefined') {
+    return 'Login failed. Please check your email and password.'
+  }
+
+  const normalized = error.trim()
+
+  if (normalized === 'CredentialsSignin') {
+    return 'Invalid email or password.'
+  }
+
+  return normalized
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -39,8 +53,8 @@ export default function LoginPage() {
         redirect: false,
       })
 
-      if (result?.error) {
-        toast.error(result.error)
+      if (result?.error || result?.ok === false) {
+        toast.error(getLoginErrorMessage(result?.error))
       } else {
         toast.success('Login successful!')
         router.push('/dashboard')
