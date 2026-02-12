@@ -24,7 +24,6 @@ import {
   ClipboardList,
   ShieldAlert,
   Settings,
-  CalendarDays,
   LineChart,
 } from 'lucide-react'
 import { cn, getInitials } from '@/lib/utils'
@@ -60,13 +59,12 @@ const adminNavItems: NavItem[] = [
   { href: '/dashboard/members', label: 'Member Approvals', icon: UserCheck, badge: 'pending' },
   { href: '/dashboard/payments', label: 'Payment Verifications', icon: ReceiptText, badge: 'payments' },
   { href: '/dashboard/vouchers', label: 'Generate Voucher', icon: ScrollText },
+  { href: '/dashboard/directory', label: 'Member Directory', icon: Users },
   { href: '/dashboard/withdrawals', label: 'Withdrawal Requests', icon: ArrowDownUp },
   { href: '/dashboard/commodity', label: 'Commodity Requests', icon: ShoppingBag },
   { href: '/dashboard/finance-report', label: 'Finance Monthly Report', icon: ClipboardList },
   { href: '/dashboard/analytics', label: 'Analytics', icon: LineChart },
-  { href: '/dashboard/month-end', label: 'Month-End Posting', icon: CalendarDays },
   { href: '/dashboard/loans', label: 'Loan Requests', icon: HandCoins, badge: 'loans' },
-  { href: '/dashboard/directory', label: 'Member Directory', icon: Users },
   { href: '/dashboard/transactions', label: 'Transactions', icon: List },
 ]
 
