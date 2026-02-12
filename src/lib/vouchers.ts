@@ -56,12 +56,18 @@ export async function buildVoucherDataset(periodInput?: string): Promise<Voucher
       staffId: true,
       monthlyContribution: true,
       createdAt: true,
+      vouchers: {
+        select: { effectiveStartDate: true },
+        orderBy: { effectiveStartDate: 'asc' },
+        take: 1,
+      },
     },
     orderBy: [{ staffId: 'asc' }, { name: 'asc' }],
   })
 
   const rows: VoucherRow[] = members.map((member, index) => {
-    const isNewMember = member.createdAt >= start && member.createdAt < end
+    const membershipStartDate = member.vouchers?.[0]?.effectiveStartDate || member.createdAt
+    const isNewMember = membershipStartDate >= start && membershipStartDate < end
     const memberFee = isNewMember ? 1000 : 100
     const monthlySavings = member.monthlyContribution || 0
 
