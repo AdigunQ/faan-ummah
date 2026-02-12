@@ -7,8 +7,8 @@ import { Toaster } from 'react-hot-toast'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Cooperative Loan System',
-  description: 'Member-owned cooperative loan management system',
+  title: 'FAAN STAFF UMMAH MULTIPURPOSE COOPERATIVE',
+  description: 'FAAN STAFF UMMAH MULTIPURPOSE COOPERATIVE management system',
   manifest: '/manifest.json',
   icons: {
     apple: '/icons/icon-192x192.png',
@@ -34,7 +34,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="CoopLoan" />
+        <meta name="apple-mobile-web-app-title" content="FAAN STAFF UMMAH MULTIPURPOSE COOPERATIVE" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#1a5f2a" />
       </head>

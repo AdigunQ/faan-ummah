@@ -3,12 +3,12 @@
 import Link from 'next/link'
 import {
   Users,
-  DollarSign,
+  Landmark,
   HandCoins,
-  AlertTriangle,
-  TrendingUp,
-  Clock,
-  ArrowRight,
+  BellRing,
+  Clock3,
+  ArrowUpRight,
+  ReceiptText,
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
@@ -27,138 +27,124 @@ interface AdminDashboardProps {
 
 export function AdminDashboard({ stats, recentTransactions }: AdminDashboardProps) {
   return (
-    <div className="animate-fadeIn">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-500 mt-1">Overview of cooperative activities</p>
+    <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-5 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-7">
+      <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan-300/25 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 bottom-0 h-52 w-52 rounded-full bg-blue-300/25 blur-3xl" />
+
+      <div className="relative mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Operations Console</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Admin Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-600">Portfolio visibility, approvals, and risk controls in one view.</p>
+        </div>
+
+        <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm">
+          <Clock3 className="h-4 w-4 text-cyan-700" />
+          Live operational snapshot
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard
+      <div className="relative mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
           title="Total Members"
           value={stats.totalMembers.toString()}
           icon={Users}
-          color="blue"
+          tone="slate"
         />
-        <StatCard
+        <MetricCard
           title="Total Savings"
           value={formatCurrency(stats.totalSavings)}
-          icon={DollarSign}
-          color="green"
+          icon={Landmark}
+          tone="emerald"
         />
-        <StatCard
+        <MetricCard
           title="Active Loans"
           value={stats.activeLoans.toString()}
           icon={HandCoins}
-          color="purple"
+          tone="violet"
         />
-        <StatCard
+        <MetricCard
           title="Pending Approvals"
           value={stats.pendingApprovals.toString()}
-          icon={AlertTriangle}
-          color="orange"
-          alert={stats.pendingApprovals > 0}
+          icon={BellRing}
+          tone="amber"
+          pulse={stats.pendingApprovals > 0}
         />
       </div>
 
-      {/* Quick Actions */}
       {stats.pendingApprovals > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 mb-8">
-          <h2 className="text-lg font-semibold text-orange-800 mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            Pending Actions Required
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="relative mb-8 rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 p-5">
+          <div className="mb-4 flex items-center gap-2 text-amber-900">
+            <BellRing className="h-4 w-4" />
+            <h2 className="text-sm font-semibold uppercase tracking-[0.15em]">Priority Queue</h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             {stats.pendingMembers > 0 && (
-              <Link
+              <ActionTile
                 href="/dashboard/members"
-                className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pendingMembers}</p>
-                  <p className="text-gray-600">Member Approvals</p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-gray-400" />
-              </Link>
+                value={stats.pendingMembers}
+                label="Member Approvals"
+              />
             )}
             {stats.pendingPayments > 0 && (
-              <Link
+              <ActionTile
                 href="/dashboard/payments"
-                className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pendingPayments}</p>
-                  <p className="text-gray-600">Payment Verifications</p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-gray-400" />
-              </Link>
+                value={stats.pendingPayments}
+                label="Payment Verifications"
+              />
             )}
             {stats.pendingLoans > 0 && (
-              <Link
+              <ActionTile
                 href="/dashboard/loans"
-                className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pendingLoans}</p>
-                  <p className="text-gray-600">Loan Requests</p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-gray-400" />
-              </Link>
+                value={stats.pendingLoans}
+                label="Loan Requests"
+              />
             )}
           </div>
         </div>
       )}
 
-      {/* Recent Transactions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-700">Recent Activity</h2>
+          <span className="inline-flex items-center gap-2 text-xs font-medium text-slate-500">
+            <ReceiptText className="h-4 w-4" />
+            Last 10 transactions
+          </span>
         </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
+          <table className="w-full min-w-[680px]">
+            <thead className="bg-slate-100/80">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Member
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                <TableHead label="Date" />
+                <TableHead label="Member" />
+                <TableHead label="Type" />
+                <TableHead label="Amount" />
+                <TableHead label="Status" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-slate-200">
               {recentTransactions.map((transaction) => (
-                <tr key={transaction.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(transaction.createdAt)}
+                <tr key={transaction.id} className="transition-colors hover:bg-slate-50/80">
+                  <td className="px-5 py-4 text-sm text-slate-700">{formatDate(transaction.createdAt)}</td>
+                  <td className="px-5 py-4 text-sm font-medium text-slate-900">{transaction.user?.name || 'Unknown'}</td>
+                  <td className="px-5 py-4">
+                    <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize text-slate-700">
+                      {transaction.type.toLowerCase().replace('_', ' ')}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {transaction.user?.name || 'Unknown'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 capitalize">
-                    {transaction.type.toLowerCase().replace('_', ' ')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatCurrency(transaction.amount)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-5 py-4 text-sm font-semibold text-slate-900">{formatCurrency(transaction.amount)}</td>
+                  <td className="px-5 py-4">
                     <StatusBadge status={transaction.status} />
                   </td>
                 </tr>
               ))}
+
               {recentTransactions.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-slate-500">
                     No recent transactions
                   </td>
                 </tr>
@@ -171,53 +157,76 @@ export function AdminDashboard({ stats, recentTransactions }: AdminDashboardProp
   )
 }
 
-function StatCard({
+function MetricCard({
   title,
   value,
   icon: Icon,
-  color,
-  alert,
+  tone,
+  pulse,
 }: {
   title: string
   value: string
   icon: any
-  color: 'blue' | 'green' | 'purple' | 'orange'
-  alert?: boolean
+  tone: 'slate' | 'emerald' | 'violet' | 'amber'
+  pulse?: boolean
 }) {
-  const colors = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    purple: 'bg-purple-50 text-purple-600',
-    orange: 'bg-orange-50 text-orange-600',
+  const tones = {
+    slate: 'border-slate-200 bg-white text-slate-700',
+    emerald: 'border-emerald-200/70 bg-emerald-50/70 text-emerald-700',
+    violet: 'border-violet-200/70 bg-violet-50/70 text-violet-700',
+    amber: 'border-amber-200/70 bg-amber-50/70 text-amber-700',
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center gap-4">
-        <div className={`p-3 rounded-lg ${colors[color]}`}>
-          <Icon className="w-6 h-6" />
+    <div className={`rounded-2xl border p-4 shadow-sm ${tones[tone]}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">{title}</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
         </div>
-        <div className="flex-1">
-          <p className="text-sm text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <div className="relative rounded-xl bg-white/80 p-2.5 shadow-sm">
+          <Icon className="h-5 w-5" />
+          {pulse && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />}
         </div>
-        {alert && (
-          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-        )}
       </div>
     </div>
   )
 }
 
+function ActionTile({ href, value, label }: { href: string; value: number; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center justify-between rounded-xl border border-white bg-white/80 px-4 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+    >
+      <div>
+        <p className="text-2xl font-bold text-slate-900">{value}</p>
+        <p className="text-sm text-slate-600">{label}</p>
+      </div>
+      <ArrowUpRight className="h-5 w-5 text-slate-400 transition-colors group-hover:text-slate-700" />
+    </Link>
+  )
+}
+
+function TableHead({ label }: { label: string }) {
+  return (
+    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+      {label}
+    </th>
+  )
+}
+
 function StatusBadge({ status }: { status: string }) {
   const styles = {
-    PENDING: 'bg-yellow-100 text-yellow-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    FAILED: 'bg-red-100 text-red-800',
+    PENDING: 'border-amber-200 bg-amber-100 text-amber-900',
+    COMPLETED: 'border-emerald-200 bg-emerald-100 text-emerald-900',
+    FAILED: 'border-rose-200 bg-rose-100 text-rose-900',
   }
 
   return (
-    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800'}`}>
+    <span
+      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${styles[status as keyof typeof styles] || 'border-slate-200 bg-slate-100 text-slate-700'}`}
+    >
       {status.toLowerCase()}
     </span>
   )

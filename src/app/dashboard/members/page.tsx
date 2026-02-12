@@ -50,9 +50,13 @@ export default async function MembersPage() {
     select: {
       id: true,
       name: true,
+      staffId: true,
       email: true,
       phone: true,
       department: true,
+      bankName: true,
+      bankAccountNumber: true,
+      bankAccountName: true,
       monthlyContribution: true,
       createdAt: true,
     },
@@ -82,9 +86,16 @@ export default async function MembersPage() {
                       {member.name || 'Unnamed Member'}
                     </p>
                     <p className="text-sm text-gray-600">{member.email}</p>
+                    <p className="text-sm text-gray-500">Staff ID: {member.staffId || 'N/A'}</p>
                     <p className="text-sm text-gray-500 mt-1">
                       Phone: {member.phone || 'N/A'} · Department:{' '}
                       {member.department || 'N/A'}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Bank: {member.bankName || 'N/A'} · {member.bankAccountNumber || 'N/A'}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Account Name: {member.bankAccountName || 'N/A'}
                     </p>
                     <p className="text-sm text-gray-500">
                       Monthly Contribution: ₦

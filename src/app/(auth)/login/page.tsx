@@ -60,8 +60,8 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-50 rounded-full mb-4">
             <Handshake className="w-10 h-10 text-primary-500" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Cooperative Loan System</h1>
-          <p className="text-gray-500 mt-2">Member-owned. Member-controlled. Member-benefited.</p>
+          <h1 className="text-2xl font-bold text-gray-900">FAAN STAFF UMMAH MULTIPURPOSE COOPERATIVE</h1>
+          <p className="text-gray-500 mt-2">Sign in to continue.</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

@@ -8,7 +8,7 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
-  DollarSign,
+  ReceiptText,
   HandCoins,
   List,
   Menu,
@@ -18,6 +18,13 @@ import {
   Wallet,
   FileText,
   PiggyBank,
+  ScrollText,
+  ArrowDownUp,
+  ShoppingBag,
+  ClipboardList,
+  ShieldAlert,
+  Settings,
+  CalendarDays,
 } from 'lucide-react'
 import { cn, getInitials } from '@/lib/utils'
 
@@ -36,7 +43,12 @@ interface NavProps {
 const adminNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/members', label: 'Member Approvals', icon: UserCheck, badge: 'pending' },
-  { href: '/dashboard/payments', label: 'Payment Verifications', icon: DollarSign, badge: 'payments' },
+  { href: '/dashboard/payments', label: 'Payment Verifications', icon: ReceiptText, badge: 'payments' },
+  { href: '/dashboard/vouchers', label: 'Finance Vouchers', icon: ScrollText },
+  { href: '/dashboard/withdrawals', label: 'Withdrawal Requests', icon: ArrowDownUp },
+  { href: '/dashboard/commodity', label: 'Commodity Requests', icon: ShoppingBag },
+  { href: '/dashboard/finance-report', label: 'Finance Monthly Report', icon: ClipboardList },
+  { href: '/dashboard/month-end', label: 'Month-End Posting', icon: CalendarDays },
   { href: '/dashboard/loans', label: 'Loan Requests', icon: HandCoins, badge: 'loans' },
   { href: '/dashboard/directory', label: 'Member Directory', icon: Users },
   { href: '/dashboard/transactions', label: 'Transactions', icon: List },
@@ -44,7 +56,10 @@ const adminNavItems = [
 
 const memberNavItems = [
   { href: '/dashboard', label: 'My Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/profile', label: 'Profile', icon: Settings },
   { href: '/dashboard/pay', label: 'Make Payment', icon: Wallet },
+  { href: '/dashboard/withdrawals', label: 'Withdraw Savings', icon: ArrowDownUp },
+  { href: '/dashboard/commodity', label: 'Commodity Request', icon: ShoppingBag },
   { href: '/dashboard/apply-loan', label: 'Apply for Loan', icon: HandCoins },
   { href: '/dashboard/my-loans', label: 'My Loans', icon: FileText },
   { href: '/dashboard/history', label: 'Transaction History', icon: PiggyBank },
@@ -74,18 +89,35 @@ export function DashboardNav({ user }: NavProps) {
         )}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="p-6 border-b border-gray-800">
-            <Link href="/dashboard" className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary-500 rounded-xl flex items-center justify-center">
-                <LayoutDashboard className="w-6 h-6" />
+          {/* Top section */}
+          {user.role === 'MEMBER' ? (
+            <div className="p-4 border-b border-gray-800">
+              <div className="flex items-center gap-3 px-4 py-3 bg-gray-800 rounded-lg">
+                <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center font-semibold">
+                  {getInitials(user.name)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{user.name}</p>
+                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                  <span className="inline-block mt-1 px-2 py-0.5 bg-primary-500/20 text-primary-300 text-xs rounded-full">
+                    {user.role}
+                  </span>
+                </div>
               </div>
-              <div>
-                <h1 className="font-bold text-lg">Cooperative</h1>
-                <p className="text-xs text-gray-400">Loan Management</p>
-              </div>
-            </Link>
-          </div>
+            </div>
+          ) : (
+            <div className="p-6 border-b border-gray-800">
+              <Link href="/dashboard" className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-primary-500 rounded-xl flex items-center justify-center">
+                  <LayoutDashboard className="w-6 h-6" />
+                </div>
+                <div>
+                  <h1 className="font-bold text-sm leading-tight">FAAN STAFF UMMAH</h1>
+                  <p className="text-xs text-gray-400">MULTIPURPOSE COOPERATIVE</p>
+                </div>
+              </Link>
+            </div>
+          )}
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
@@ -109,18 +141,20 @@ export function DashboardNav({ user }: NavProps) {
 
           {/* User section */}
           <div className="p-4 border-t border-gray-800">
-            <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-gray-800 rounded-lg">
-              <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center font-semibold">
-                {getInitials(user.name)}
+            {user.role !== 'MEMBER' && (
+              <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-gray-800 rounded-lg">
+                <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center font-semibold">
+                  {getInitials(user.name)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{user.name}</p>
+                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                  <span className="inline-block mt-1 px-2 py-0.5 bg-primary-500/20 text-primary-300 text-xs rounded-full">
+                    {user.role}
+                  </span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{user.name}</p>
-                <p className="text-xs text-gray-400 truncate">{user.email}</p>
-                <span className="inline-block mt-1 px-2 py-0.5 bg-primary-500/20 text-primary-300 text-xs rounded-full">
-                  {user.role}
-                </span>
-              </div>
-            </div>
+            )}
 
             {user.role === 'MEMBER' && (
               <div className="mb-4 px-4 space-y-2">
@@ -132,6 +166,19 @@ export function DashboardNav({ user }: NavProps) {
                   <span className="text-gray-400">Loan:</span>
                   <span className="text-orange-400">₦{user.loanBalance.toLocaleString()}</span>
                 </div>
+                <Link
+                  href="/dashboard/delete-account"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    'mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
+                    pathname === '/dashboard/delete-account'
+                      ? 'bg-red-500/20 text-red-300'
+                      : 'text-red-400 hover:bg-red-500/10'
+                  )}
+                >
+                  <ShieldAlert className="h-4 w-4" />
+                  <span>Delete Account</span>
+                </Link>
               </div>
             )}
 

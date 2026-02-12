@@ -54,8 +54,8 @@ export function calculateLoanDetails(principal: number, durationMonths: number, 
 }
 
 export function getLoanEligibility(totalContributions: number): number {
-  // Members can borrow up to 3x their total contributions
-  return totalContributions * 3
+  // Members can borrow up to 2x their current savings balance.
+  return totalContributions * 2
 }
 
 export function getInitials(name: string | null): string {

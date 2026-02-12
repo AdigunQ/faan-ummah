@@ -41,6 +41,7 @@ model User {
   id                String    @id @default(cuid())
   name              String?
   email             String    @unique
+  staffId           String?   @unique @map("staff_id")
   emailVerified     DateTime? @map("email_verified")
   password          String?   // For credentials provider
   image             String?
@@ -48,10 +49,16 @@ model User {
   status            Status    @default(PENDING)
   phone             String?
   department        String?
+  bankName          String?   @map("bank_name")
+  bankAccountNumber String?   @map("bank_account_number")
+  bankAccountName   String?   @map("bank_account_name")
   monthlyContribution Float?  @default(10000) @map("monthly_contribution")
   balance           Float     @default(0)
   totalContributions Float    @default(0) @map("total_contributions")
   loanBalance       Float     @default(0) @map("loan_balance")
+  partialWithdrawalUsed Boolean @default(false) @map("partial_withdrawal_used")
+  voucherEnabled     Boolean   @default(true) @map("voucher_enabled")
+  closureDate        DateTime? @map("closure_date")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -60,6 +67,10 @@ model User {
   payments      Payment[]
   loans         Loan[]
   transactions  Transaction[]
+  vouchers      Voucher[]
+  withdrawals   Withdrawal[]
+  commodityRequests CommodityRequest[]
+  payrollLines  PayrollLine[]
 
   @@map("users")
 }
@@ -80,6 +91,7 @@ model Payment {
   amount      Float
   date        DateTime
   proofImage  String?       @map("proof_image")
+  transactionReference String? @map("transaction_reference")
   status      PaymentStatus @default(PENDING)
   notes       String?
   reviewedBy  String?       @map("reviewed_by")
@@ -90,6 +102,49 @@ model Payment {
   transaction Transaction?
 
   @@map("payments")
+}
+
+model Voucher {
+  id                 String       @id @default(cuid())
+  userId             String       @map("user_id")
+  fullName           String       @map("full_name")
+  staffId            String       @map("staff_id")
+  department         String
+  monthlyDeduction   Float        @map("monthly_deduction")
+  effectiveStartDate DateTime     @map("effective_start_date")
+  status             VoucherStatus @default(GENERATED)
+  generatedAt        DateTime     @default(now()) @map("generated_at")
+  sentAt             DateTime?    @map("sent_at")
+  notes              String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("vouchers")
+}
+
+model Withdrawal {
+  id                  String            @id @default(cuid())
+  userId              String            @map("user_id")
+  type                WithdrawalType
+  requestedAmount     Float             @map("requested_amount")
+  approvedAmount      Float?            @map("approved_amount")
+  maxAllowedAtRequest Float?            @map("max_allowed_at_request")
+  reason              String?
+  status              WithdrawalStatus  @default(PENDING)
+  reviewedBy          String?           @map("reviewed_by")
+  useProfileBank      Boolean           @default(true) @map("use_profile_bank")
+  payoutBankName      String?           @map("payout_bank_name")
+  payoutAccountNumber String?           @map("payout_account_number")
+  payoutAccountName   String?           @map("payout_account_name")
+  requestedAt         DateTime          @default(now()) @map("requested_at")
+  reviewedAt          DateTime?         @map("reviewed_at")
+  closureDate         DateTime?         @map("closure_date")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("withdrawals")
 }
 
 model Loan {
@@ -106,13 +161,80 @@ model Loan {
   status      LoanStatus @default(PENDING)
   approvedBy  String?    @map("approved_by")
   approvedAt  DateTime?  @map("approved_at")
+  disbursementBankName String? @map("disbursement_bank_name")
+  disbursementAccountNumber String? @map("disbursement_account_number")
+  disbursementAccountName String? @map("disbursement_account_name")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   repayments  Repayment[]
+  payrollLines PayrollLine[]
 
   @@map("loans")
+}
+
+model PayrollCycle {
+  id                   String             @id @default(cuid())
+  period               String             @unique
+  status               PayrollCycleStatus @default(DRAFT)
+  financeConfirmedBy   String?            @map("finance_confirmed_by")
+  financeConfirmedAt   DateTime?          @map("finance_confirmed_at")
+  postedBy             String?            @map("posted_by")
+  postedAt             DateTime?          @map("posted_at")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  lines PayrollLine[]
+
+  @@map("payroll_cycles")
+}
+
+model PayrollLine {
+  id             String            @id @default(cuid())
+  cycleId        String            @map("cycle_id")
+  userId         String            @map("user_id")
+  loanId         String?           @map("loan_id")
+  lineType       PayrollLineType   @map("line_type")
+  expectedAmount Float             @map("expected_amount")
+  actualAmount   Float?            @map("actual_amount")
+  status         PayrollLineStatus @default(PENDING)
+  reason         String?
+  postedAt       DateTime?         @map("posted_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  cycle PayrollCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loan  Loan?        @relation(fields: [loanId], references: [id], onDelete: SetNull)
+
+  @@index([cycleId, userId])
+  @@index([cycleId, lineType])
+  @@map("payroll_lines")
+}
+
+model CommodityRequest {
+  id                   String          @id @default(cuid())
+  userId               String          @map("user_id")
+  itemCategory         String          @map("item_category")
+  itemModel            String          @map("item_model")
+  preferredBudget      Float           @map("preferred_budget")
+  preferredMonths      Int             @map("preferred_months")
+  contactPreference    ContactPreference @default(WHATSAPP) @map("contact_preference")
+  notes                String?
+  status               CommodityStatus @default(PENDING)
+  adminQuotedPrice     Float?          @map("admin_quoted_price")
+  adminApprovedMonths  Int?            @map("admin_approved_months")
+  adminMonthlyRepayment Float?         @map("admin_monthly_repayment")
+  adminFeedback        String?         @map("admin_feedback")
+  reviewedBy           String?         @map("reviewed_by")
+  reviewedAt           DateTime?       @map("reviewed_at")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("commodity_requests")
 }
 
 model Repayment {
@@ -154,6 +276,7 @@ enum Status {
   ACTIVE
   REJECTED
   SUSPENDED
+  CLOSED
 }
 
 enum PaymentType {
@@ -189,4 +312,52 @@ enum TransactionStatus {
   PENDING
   COMPLETED
   FAILED
+}
+
+enum VoucherStatus {
+  GENERATED
+  SENT
+  REMOVED
+}
+
+enum WithdrawalType {
+  PARTIAL
+  FULL_DISCONTINUATION
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CommodityStatus {
+  PENDING
+  OFFERED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ContactPreference {
+  EMAIL
+  WHATSAPP
+  BOTH
+}
+
+enum PayrollCycleStatus {
+  DRAFT
+  FINANCE_CONFIRMED
+  POSTED
+}
+
+enum PayrollLineType {
+  SAVINGS
+  LOAN_REPAYMENT
+}
+
+enum PayrollLineStatus {
+  PENDING
+  EXCLUDED
+  POSTED
 }

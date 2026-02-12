@@ -25,8 +25,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Please enter email and password')
         }
 
+        const email = credentials.email.trim().toLowerCase()
+        const password = credentials.password
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email },
         })
 
         if (!user || !user.password) {
@@ -34,7 +37,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const isPasswordValid = await bcrypt.compare(
-          credentials.password,
+          password,
           user.password
         )
 
@@ -52,6 +55,10 @@ export const authOptions: NextAuthOptions = {
 
         if (user.status === 'SUSPENDED') {
           throw new Error('Account has been suspended. Contact admin.')
+        }
+
+        if (user.status === 'CLOSED') {
+          throw new Error('Account is closed. Contact admin for reactivation.')
         }
 
         return {

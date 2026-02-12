@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
 import { MemberDashboard } from '@/components/dashboard/member-dashboard'
+import { LOAN_POLICY } from '@/lib/constants'
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
   }
 
   // Member dashboard data
-  const loanEligibility = user.totalContributions * 3
+  const loanEligibility = user.balance * LOAN_POLICY.maxSavingsMultiplier
 
   return (
     <MemberDashboard

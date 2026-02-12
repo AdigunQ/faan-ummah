@@ -10,11 +10,15 @@ import { toast } from 'react-hot-toast'
 import { Loader2, UserPlus } from 'lucide-react'
 
 const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  department: z.string().min(2, 'Department is required'),
-  monthlyContribution: z.number().min(5000, 'Minimum contribution is ₦5,000'),
+  name: z.string().trim().min(2, 'Full name is required'),
+  staffId: z.string().trim().min(1, 'Staff ID is required').regex(/^[a-zA-Z0-9-]+$/, 'Staff ID must be alphanumeric'),
+  email: z.string().trim().min(1, 'Email is required').email('Invalid email address'),
+  phone: z.string().trim().min(1, 'Phone number is required').min(10, 'Phone number must be at least 10 digits'),
+  department: z.string().trim().min(1, 'Department is required'),
+  bankName: z.string().trim().min(1, 'Bank name is required'),
+  bankAccountNumber: z.string().trim().min(10, 'Bank account number must be at least 10 digits').max(20),
+  bankAccountName: z.string().trim().min(2, 'Bank account name is required'),
+  monthlyContribution: z.number({ invalid_type_error: 'Monthly savings amount is required' }).gt(0, 'Monthly savings amount must be greater than zero'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -48,9 +52,13 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
+          staffId: data.staffId,
           email: data.email,
           phone: data.phone,
           department: data.department,
+          bankName: data.bankName,
+          bankAccountNumber: data.bankAccountNumber,
+          bankAccountName: data.bankAccountName,
           monthlyContribution: data.monthlyContribution,
           password: data.password,
         }),
@@ -91,6 +99,7 @@ export default function RegisterPage() {
               {...register('name')}
               type="text"
               placeholder="Enter your full name"
+              required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
             />
             {errors.name && (
@@ -106,10 +115,27 @@ export default function RegisterPage() {
               {...register('email')}
               type="email"
               placeholder="Enter your email"
+              required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Staff ID
+            </label>
+            <input
+              {...register('staffId')}
+              type="text"
+              placeholder="e.g. OPS-1042"
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+            />
+            {errors.staffId && (
+              <p className="mt-1 text-sm text-red-600">{errors.staffId.message}</p>
             )}
           </div>
 
@@ -122,6 +148,7 @@ export default function RegisterPage() {
                 {...register('phone')}
                 type="tel"
                 placeholder="Phone"
+                required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
               />
               {errors.phone && (
@@ -137,6 +164,7 @@ export default function RegisterPage() {
                 {...register('department')}
                 type="text"
                 placeholder="Department"
+                required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
               />
               {errors.department && (
@@ -147,18 +175,72 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Monthly Contribution (₦)
+              Bank Name
+            </label>
+            <input
+              {...register('bankName')}
+              type="text"
+              placeholder="e.g. Access Bank"
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+            />
+            {errors.bankName && (
+              <p className="mt-1 text-sm text-red-600">{errors.bankName.message}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Bank Account Number
+              </label>
+              <input
+                {...register('bankAccountNumber')}
+                type="text"
+                placeholder="10-digit account number"
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+              />
+              {errors.bankAccountNumber && (
+                <p className="mt-1 text-sm text-red-600">{errors.bankAccountNumber.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Bank Account Name
+              </label>
+              <input
+                {...register('bankAccountName')}
+                type="text"
+                placeholder="Name on account"
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+              />
+              {errors.bankAccountName && (
+                <p className="mt-1 text-sm text-red-600">{errors.bankAccountName.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Monthly Savings Amount (₦)
             </label>
             <input
               {...register('monthlyContribution', { valueAsNumber: true })}
               type="number"
-              min="5000"
+              min="1"
               placeholder="e.g. 10000"
+              required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
             />
             {errors.monthlyContribution && (
               <p className="mt-1 text-sm text-red-600">{errors.monthlyContribution.message}</p>
             )}
+            <p className="mt-1 text-xs text-gray-500">
+              This amount authorizes monthly salary deduction into your cooperative savings.
+            </p>
           </div>
 
           <div>
@@ -169,6 +251,7 @@ export default function RegisterPage() {
               {...register('password')}
               type="password"
               placeholder="Create password"
+              required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
             />
             {errors.password && (
@@ -184,6 +267,7 @@ export default function RegisterPage() {
               {...register('confirmPassword')}
               type="password"
               placeholder="Confirm password"
+              required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
             />
             {errors.confirmPassword && (

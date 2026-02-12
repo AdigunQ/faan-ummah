@@ -6,12 +6,14 @@ import {
   HandCoins,
   PiggyBank,
   TrendingUp,
-  ArrowRight,
+  ArrowUpRight,
   Clock,
   CheckCircle,
   AlertCircle,
+  Sparkles,
 } from 'lucide-react'
-import { formatCurrency, getLoanEligibility, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import { LOAN_POLICY } from '@/lib/constants'
 
 interface MemberDashboardProps {
   user: {
@@ -39,139 +41,119 @@ export function MemberDashboard({
 
   if (isPending) {
     return (
-      <div className="animate-fadeIn">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center">
-          <Clock className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-yellow-800 mb-2">Account Pending Approval</h1>
-          <p className="text-yellow-700 max-w-md mx-auto">
-            Your account is awaiting admin approval. You'll be notified once your application 
-            has been reviewed. Thank you for your patience.
-          </p>
-        </div>
+      <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 p-8 text-center shadow-sm animate-fadeIn">
+        <Clock className="mx-auto mb-4 h-14 w-14 text-amber-700" />
+        <h1 className="text-2xl font-bold text-amber-900">Account Pending Approval</h1>
+        <p className="mx-auto mt-2 max-w-lg text-amber-800">
+          Your account is awaiting admin approval. You will receive access to all member tools immediately after review.
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="animate-fadeIn">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user.name?.split(' ')[0]}</h1>
-        <p className="text-gray-500 mt-1">Here's your account overview</p>
+    <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-5 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-7 animate-fadeIn">
+      <div className="pointer-events-none absolute -right-16 top-0 h-44 w-44 rounded-full bg-blue-300/25 blur-3xl" />
+      <div className="pointer-events-none absolute -left-16 bottom-0 h-48 w-48 rounded-full bg-emerald-300/25 blur-3xl" />
+
+      <div className="relative mb-8 rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Member Portfolio</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+              Welcome back, {user.name?.split(' ')[0] || 'Member'}
+            </h1>
+            <p className="mt-1 text-sm text-slate-600">Track savings, repayments, and loan readiness in one place.</p>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+            <Sparkles className="h-4 w-4" />
+            Financial health: strong
+          </div>
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="relative mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Total Savings" value={formatCurrency(user.balance)} icon={Wallet} tone="emerald" />
+        <StatCard title="Active Loan" value={formatCurrency(user.loanBalance)} icon={HandCoins} tone="amber" />
         <StatCard
-          title="Total Savings"
-          value={formatCurrency(user.balance)}
-          icon={Wallet}
-          color="green"
-        />
-        <StatCard
-          title="Active Loan"
-          value={formatCurrency(user.loanBalance)}
-          icon={HandCoins}
-          color="orange"
-        />
-        <StatCard
-          title="Total Contributions"
+          title="Contributions"
           value={formatCurrency(user.totalContributions)}
           icon={PiggyBank}
-          color="blue"
+          tone="blue"
         />
         <StatCard
           title="Loan Eligibility"
           value={formatCurrency(loanEligibility)}
           icon={TrendingUp}
-          color="purple"
-          subtitle="Up to 3x your savings"
+          tone="violet"
+          subtitle="Maximum 2x your savings"
         />
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
         <QuickActionCard
           href="/dashboard/pay"
           title="Make Payment"
-          description="Contribute or repay loan"
+          description="Contribution or loan repayment"
           icon={Wallet}
-          color="green"
         />
         <QuickActionCard
           href="/dashboard/apply-loan"
           title="Apply for Loan"
           description={`Eligible up to ${formatCurrency(loanEligibility)}`}
           icon={HandCoins}
-          color="blue"
-          disabled={loanEligibility < 10000}
+          disabled={loanEligibility < LOAN_POLICY.minAmount || user.loanBalance > 0}
         />
         <QuickActionCard
           href="/dashboard/history"
-          title="View History"
-          description="Transaction & loan records"
+          title="Transaction History"
+          description="Review past activity"
           icon={PiggyBank}
-          color="purple"
         />
       </div>
 
-      {/* Monthly Contribution Info */}
       {user.monthlyContribution && (
-        <div className="bg-primary-50 border border-primary-200 rounded-xl p-6 mb-8">
-          <div className="flex items-center justify-between">
+        <div className="mb-8 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-cyan-50 to-blue-50 p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-primary-800">Monthly Contribution</h3>
-              <p className="text-primary-600">
-                Your committed monthly contribution is{' '}
-                <span className="font-bold">{formatCurrency(user.monthlyContribution)}</span>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-900">Monthly Plan</h3>
+              <p className="mt-1 text-sm text-blue-800">
+                Target contribution: <span className="font-semibold">{formatCurrency(user.monthlyContribution)}</span>
               </p>
             </div>
             <Link
               href="/dashboard/pay"
-              className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+              className="inline-flex items-center justify-center rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-800"
             >
-              Pay Now
+              Pay now
             </Link>
           </div>
         </div>
       )}
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Payments */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Payments</h2>
-            <Link
-              href="/dashboard/history"
-              className="text-primary-500 hover:text-primary-600 text-sm font-medium flex items-center gap-1"
-            >
-              View All <ArrowRight className="w-4 h-4" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-700">Recent Payments</h2>
+            <Link href="/dashboard/history" className="text-xs font-semibold text-blue-700 hover:text-blue-800">
+              View all
             </Link>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-slate-200">
             {recentPayments.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
-                <AlertCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                <p>No payments yet</p>
-              </div>
+              <EmptyState icon={AlertCircle} text="No payments yet" />
             ) : (
               recentPayments.slice(0, 5).map((payment) => (
-                <div key={payment.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                <div key={payment.id} className="flex items-center justify-between px-5 py-4">
                   <div>
-                    <p className="font-medium text-gray-900 capitalize">
+                    <p className="text-sm font-semibold capitalize text-slate-900">
                       {payment.type.toLowerCase().replace('_', ' ')}
                     </p>
-                    <p className="text-sm text-gray-500">{formatDate(payment.date)}</p>
+                    <p className="text-xs text-slate-500">{formatDate(payment.date || payment.createdAt)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">{formatCurrency(payment.amount)}</p>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      payment.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                      payment.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {payment.status.toLowerCase()}
-                    </span>
+                    <p className="text-sm font-semibold text-slate-900">{formatCurrency(payment.amount)}</p>
+                    <StatusPill status={payment.status} />
                   </div>
                 </div>
               ))
@@ -179,48 +161,32 @@ export function MemberDashboard({
           </div>
         </div>
 
-        {/* Recent Loans */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Loan History</h2>
-            <Link
-              href="/dashboard/my-loans"
-              className="text-primary-500 hover:text-primary-600 text-sm font-medium flex items-center gap-1"
-            >
-              View All <ArrowRight className="w-4 h-4" />
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-700">Loan History</h2>
+            <Link href="/dashboard/my-loans" className="text-xs font-semibold text-blue-700 hover:text-blue-800">
+              View all
             </Link>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-slate-200">
             {recentLoans.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
-                <CheckCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                <p>No loans yet</p>
-                <Link
-                  href="/dashboard/apply-loan"
-                  className="text-primary-500 hover:underline text-sm mt-2 inline-block"
-                >
+              <div className="px-5 py-8 text-center text-slate-500">
+                <CheckCircle className="mx-auto mb-2 h-10 w-10 text-slate-300" />
+                <p className="text-sm">No loans yet</p>
+                <Link href="/dashboard/apply-loan" className="mt-2 inline-block text-xs font-semibold text-blue-700 hover:text-blue-800">
                   Apply for your first loan
                 </Link>
               </div>
             ) : (
               recentLoans.slice(0, 5).map((loan) => (
-                <div key={loan.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                <div key={loan.id} className="flex items-center justify-between px-5 py-4">
                   <div>
-                    <p className="font-medium text-gray-900 capitalize">
-                      {loan.purpose}
-                    </p>
-                    <p className="text-sm text-gray-500">{loan.duration} months</p>
+                    <p className="text-sm font-semibold capitalize text-slate-900">{loan.purpose}</p>
+                    <p className="text-xs text-slate-500">{loan.duration} months</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">{formatCurrency(loan.amount)}</p>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      loan.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                      loan.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                      loan.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {loan.status.toLowerCase()}
-                    </span>
+                    <p className="text-sm font-semibold text-slate-900">{formatCurrency(loan.amount)}</p>
+                    <StatusPill status={loan.status} />
                   </div>
                 </div>
               ))
@@ -236,32 +202,32 @@ function StatCard({
   title,
   value,
   icon: Icon,
-  color,
+  tone,
   subtitle,
 }: {
   title: string
   value: string
   icon: any
-  color: 'blue' | 'green' | 'purple' | 'orange'
+  tone: 'emerald' | 'amber' | 'blue' | 'violet'
   subtitle?: string
 }) {
-  const colors = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    purple: 'bg-purple-50 text-purple-600',
-    orange: 'bg-orange-50 text-orange-600',
+  const tones = {
+    emerald: 'border-emerald-200/70 bg-emerald-50/70 text-emerald-700',
+    amber: 'border-amber-200/70 bg-amber-50/70 text-amber-700',
+    blue: 'border-blue-200/70 bg-blue-50/70 text-blue-700',
+    violet: 'border-violet-200/70 bg-violet-50/70 text-violet-700',
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center gap-4">
-        <div className={`p-3 rounded-lg ${colors[color]}`}>
-          <Icon className="w-6 h-6" />
+    <div className={`rounded-2xl border p-4 shadow-sm ${tones[tone]}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">{title}</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
+          {subtitle && <p className="mt-1 text-xs text-slate-500">{subtitle}</p>}
         </div>
-        <div className="flex-1">
-          <p className="text-sm text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-          {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
+        <div className="rounded-xl bg-white/85 p-2.5 shadow-sm">
+          <Icon className="h-5 w-5" />
         </div>
       </div>
     </div>
@@ -273,38 +239,24 @@ function QuickActionCard({
   title,
   description,
   icon: Icon,
-  color,
   disabled,
 }: {
   href: string
   title: string
   description: string
   icon: any
-  color: 'green' | 'blue' | 'purple'
   disabled?: boolean
 }) {
-  const colors = {
-    green: 'hover:border-green-500 hover:bg-green-50',
-    blue: 'hover:border-blue-500 hover:bg-blue-50',
-    purple: 'hover:border-purple-500 hover:bg-purple-50',
-  }
-
-  const iconColors = {
-    green: 'text-green-600 bg-green-100',
-    blue: 'text-blue-600 bg-blue-100',
-    purple: 'text-purple-600 bg-purple-100',
-  }
-
   if (disabled) {
     return (
-      <div className="bg-gray-100 border-2 border-gray-200 rounded-xl p-6 opacity-50 cursor-not-allowed">
-        <div className="flex items-start gap-4">
-          <div className={`p-3 rounded-lg ${iconColors[color]}`}>
-            <Icon className="w-6 h-6" />
+      <div className="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-5 opacity-60">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg bg-white p-2.5 shadow-sm">
+            <Icon className="h-5 w-5 text-slate-500" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">{title}</h3>
-            <p className="text-sm text-gray-500 mt-1">Save more to unlock</p>
+            <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+            <p className="mt-1 text-xs text-slate-500">Increase savings to unlock</p>
           </div>
         </div>
       </div>
@@ -314,18 +266,43 @@ function QuickActionCard({
   return (
     <Link
       href={href}
-      className={`block bg-white border-2 border-gray-200 rounded-xl p-6 transition-all ${colors[color]} group`}
+      className="group rounded-2xl border border-slate-200 bg-white/90 px-4 py-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-md"
     >
-      <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-lg ${iconColors[color]}`}>
-          <Icon className="w-6 h-6" />
+      <div className="flex items-start gap-3">
+        <div className="rounded-lg bg-slate-100 p-2.5">
+          <Icon className="h-5 w-5 text-slate-700" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 group-hover:text-gray-700">{title}</h3>
-          <p className="text-sm text-gray-500 mt-1">{description}</p>
+          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+          <p className="mt-1 text-xs text-slate-500">{description}</p>
         </div>
-        <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+        <ArrowUpRight className="h-4 w-4 text-slate-400 transition-colors group-hover:text-slate-700" />
       </div>
     </Link>
+  )
+}
+
+function EmptyState({ icon: Icon, text }: { icon: any; text: string }) {
+  return (
+    <div className="px-5 py-8 text-center text-slate-500">
+      <Icon className="mx-auto mb-2 h-10 w-10 text-slate-300" />
+      <p className="text-sm">{text}</p>
+    </div>
+  )
+}
+
+function StatusPill({ status }: { status: string }) {
+  const styleMap: Record<string, string> = {
+    APPROVED: 'border-emerald-200 bg-emerald-100 text-emerald-900',
+    PENDING: 'border-amber-200 bg-amber-100 text-amber-900',
+    COMPLETED: 'border-blue-200 bg-blue-100 text-blue-900',
+    REJECTED: 'border-rose-200 bg-rose-100 text-rose-900',
+    FAILED: 'border-rose-200 bg-rose-100 text-rose-900',
+  }
+
+  return (
+    <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${styleMap[status] || 'border-slate-200 bg-slate-100 text-slate-700'}`}>
+      {status}
+    </span>
   )
 }
