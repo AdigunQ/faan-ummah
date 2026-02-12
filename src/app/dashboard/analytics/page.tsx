@@ -44,7 +44,7 @@ export default async function AnalyticsPage() {
   const [memberStats, memberStatusCounts, pendingQueue, outstandingLoanAgg, upcomingVoucherMembers] =
     await Promise.all([
       prisma.user.aggregate({
-        where: { role: 'MEMBER' },
+        where: { role: 'MEMBER', status: 'ACTIVE' },
         _count: { _all: true },
         _sum: { balance: true, totalContributions: true, loanBalance: true },
       }),
@@ -67,7 +67,7 @@ export default async function AnalyticsPage() {
       prisma.user.findMany({
         where: {
           role: 'MEMBER',
-          status: { in: ['ACTIVE', 'PENDING'] },
+          status: 'ACTIVE',
           voucherEnabled: true,
           monthlyContribution: { gt: 0 },
         },
@@ -105,7 +105,7 @@ export default async function AnalyticsPage() {
         prisma.user.findMany({
           where: {
             role: 'MEMBER',
-            status: { in: ['ACTIVE', 'PENDING'] },
+            status: 'ACTIVE',
             voucherEnabled: true,
             monthlyContribution: { gt: 0 },
             createdAt: { lt: end },
@@ -163,7 +163,7 @@ export default async function AnalyticsPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <HeaderKpi label="Members" value={totalMembers.toLocaleString('en-NG')} icon={<Users className="h-4 w-4" />} />
+            <HeaderKpi label="Approved members" value={totalMembers.toLocaleString('en-NG')} icon={<Users className="h-4 w-4" />} />
             <HeaderKpi label="Savings Pool" value={formatCurrency(totalSavingsPool)} icon={<Banknote className="h-4 w-4" />} />
             <HeaderKpi label="Outstanding Loans" value={formatCurrency(outstandingLoanBalance)} icon={<CreditCard className="h-4 w-4" />} />
             <HeaderKpi label="Fees (6M)" value={formatCurrency(sixMonthFees)} icon={<BadgeCheck className="h-4 w-4" />} />

@@ -56,7 +56,7 @@ export default async function DirectoryPage({
   }
 
   const members = await prisma.user.findMany({
-    where: { role: 'MEMBER' },
+    where: { role: 'MEMBER', status: { not: 'PENDING' } },
     orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
     select: {
       id: true,
@@ -83,7 +83,7 @@ export default async function DirectoryPage({
   })
 
   const activeCount = members.filter((member) => member.status === 'ACTIVE').length
-  const pendingCount = members.filter((member) => member.status === 'PENDING').length
+  const otherCount = Math.max(0, members.length - activeCount)
   const savedMember = searchParams?.saved ? members.find((m) => m.id === searchParams.saved) : undefined
   const savedMemberId = searchParams?.saved || ''
 
@@ -101,9 +101,9 @@ export default async function DirectoryPage({
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <MetricCard label="Total Members" value={members.length.toString()} tone="blue" />
+        <MetricCard label="Approved Members" value={members.length.toString()} tone="blue" />
         <MetricCard label="Active Members" value={activeCount.toString()} tone="green" />
-        <MetricCard label="Pending Members" value={pendingCount.toString()} tone="amber" />
+        <MetricCard label="Other Status" value={otherCount.toString()} tone="amber" />
         <MetricCard
           label="Total Savings"
           value={formatCurrency(members.reduce((sum, member) => sum + member.balance, 0))}

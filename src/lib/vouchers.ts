@@ -74,7 +74,7 @@ export async function buildVoucherDataset(periodInput?: string): Promise<Voucher
   const members = await prisma.user.findMany({
     where: {
       role: 'MEMBER',
-      status: { in: ['ACTIVE', 'PENDING'] },
+      status: 'ACTIVE',
       voucherEnabled: true,
       monthlyContribution: { gt: 0 },
     },
