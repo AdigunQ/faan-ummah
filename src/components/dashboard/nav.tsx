@@ -39,9 +39,23 @@ interface NavProps {
     balance: number
     loanBalance: number
   }
+  adminBadges?: {
+    pendingMembers: number
+    pendingPayments: number
+    pendingLoans: number
+  }
 }
 
-const adminNavItems = [
+type BadgeKey = 'pending' | 'payments' | 'loans'
+
+type NavItem = {
+  href: string
+  label: string
+  icon: any
+  badge?: BadgeKey
+}
+
+const adminNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/members', label: 'Member Approvals', icon: UserCheck, badge: 'pending' },
   { href: '/dashboard/payments', label: 'Payment Verifications', icon: ReceiptText, badge: 'payments' },
@@ -56,7 +70,7 @@ const adminNavItems = [
   { href: '/dashboard/transactions', label: 'Transactions', icon: List },
 ]
 
-const memberNavItems = [
+const memberNavItems: NavItem[] = [
   { href: '/dashboard', label: 'My Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/profile', label: 'Profile', icon: Settings },
   { href: '/dashboard/pay', label: 'Make Payment', icon: Wallet },
@@ -67,11 +81,16 @@ const memberNavItems = [
   { href: '/dashboard/history', label: 'Transaction History', icon: PiggyBank },
 ]
 
-export function DashboardNav({ user }: NavProps) {
+export function DashboardNav({ user, adminBadges }: NavProps) {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const navItems = user.role === 'ADMIN' ? adminNavItems : memberNavItems
+  const badgeCounts = {
+    pending: adminBadges?.pendingMembers ?? 0,
+    payments: adminBadges?.pendingPayments ?? 0,
+    loans: adminBadges?.pendingLoans ?? 0,
+  } as const
 
   return (
     <>
@@ -137,6 +156,13 @@ export function DashboardNav({ user }: NavProps) {
               >
                 <item.icon className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>
+                {user.role === 'ADMIN' &&
+                  item.badge &&
+                  badgeCounts[item.badge] > 0 && (
+                    <span className="ml-auto inline-flex min-w-[1.6rem] items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold leading-none text-white">
+                      {badgeCounts[item.badge]}
+                    </span>
+                  )}
               </Link>
             ))}
           </nav>

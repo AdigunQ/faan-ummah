@@ -39,9 +39,22 @@ export default async function DashboardLayout({
     await autoPostMonthEndIfDue()
   }
 
+  const adminBadges =
+    user.role === 'ADMIN'
+      ? await (async () => {
+          const [pendingMembers, pendingPayments, pendingLoans] = await Promise.all([
+            prisma.user.count({ where: { role: 'MEMBER', status: 'PENDING' } }),
+            prisma.payment.count({ where: { status: 'PENDING' } }),
+            prisma.loan.count({ where: { status: 'PENDING' } }),
+          ])
+
+          return { pendingMembers, pendingPayments, pendingLoans }
+        })()
+      : undefined
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardNav user={user} />
+      <DashboardNav user={user} adminBadges={adminBadges} />
       <main className="lg:ml-64 min-h-screen">
         <div className="p-4 lg:p-8">
           {children}
