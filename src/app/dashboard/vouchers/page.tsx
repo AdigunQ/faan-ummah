@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { formatCurrency } from '@/lib/utils'
-import { buildVoucherDataset, VOUCHER_TITLE } from '@/lib/vouchers'
+import { buildVoucherDataset } from '@/lib/vouchers'
 
 type SearchParams = {
   period?: string
@@ -24,7 +24,7 @@ export default async function VouchersPage({
   return (
     <div className="animate-fadeIn space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Voucher Menu</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Generate Voucher</h1>
         <p className="mt-1 text-gray-500">
           Admin voucher table for monthly salary deductions. CSV export follows the uploaded spreadsheet format.
         </p>
@@ -66,8 +66,7 @@ export default async function VouchersPage({
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">{VOUCHER_TITLE}</h2>
-          <p className="text-xs text-gray-500">Format: S/N, Staff ID, Name, Thrift Savings</p>
+          <h2 className="text-lg font-semibold text-gray-900">Voucher Preview</h2>
         </div>
 
         {dataset.rows.length === 0 ? (
