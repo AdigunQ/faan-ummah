@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency } from '@/lib/utils'
+import { firstVoucherPeriodForCreatedAt } from '@/lib/vouchers'
 
 type AnalyticsRow = {
   month: string
@@ -30,6 +31,7 @@ export default async function AnalyticsPage() {
     months.map(async (startDate): Promise<AnalyticsRow> => {
       const start = monthStart(startDate)
       const end = new Date(start.getFullYear(), start.getMonth() + 1, 1)
+      const period = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`
 
       const [registrations, activeMembers] = await Promise.all([
         prisma.user.count({
@@ -41,20 +43,24 @@ export default async function AnalyticsPage() {
         prisma.user.findMany({
           where: {
             role: 'MEMBER',
-            status: 'ACTIVE',
+            status: { in: ['ACTIVE', 'PENDING'] },
             voucherEnabled: true,
             monthlyContribution: { gt: 0 },
             createdAt: { lt: end },
-            OR: [{ closureDate: null }, { closureDate: { gte: start } }],
           },
           select: { createdAt: true, monthlyContribution: true },
         }),
       ])
 
-      const newMembers = activeMembers.filter((member) => member.createdAt >= start && member.createdAt < end).length
-      const oldMembers = Math.max(0, activeMembers.length - newMembers)
+      const includedThisMonth = activeMembers.filter(
+        (member) => firstVoucherPeriodForCreatedAt(member.createdAt) <= period
+      )
+      const newMembers = includedThisMonth.filter(
+        (member) => firstVoucherPeriodForCreatedAt(member.createdAt) === period
+      ).length
+      const oldMembers = Math.max(0, includedThisMonth.length - newMembers)
       const feeAmount = newMembers * 1000 + oldMembers * 100
-      const savingsAmount = activeMembers.reduce((sum, member) => sum + (member.monthlyContribution || 0), 0)
+      const savingsAmount = includedThisMonth.reduce((sum, member) => sum + (member.monthlyContribution || 0), 0)
 
       return {
         month: start.toLocaleDateString('en-NG', { month: 'short', year: '2-digit' }),

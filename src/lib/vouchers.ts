@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 
 export const VOUCHER_TITLE = 'LIST OF NAIA MULTIPUPOSE COOPERATIVES MEMBERS'
+export const VOUCHER_CUTOFF_DAY = 15
 
 export type VoucherRow = {
   serial: number
@@ -41,13 +42,39 @@ export function resolveVoucherPeriod(periodInput?: string) {
   return { period, start, end }
 }
 
+function pad2(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+export function firstVoucherPeriodForCreatedAt(createdAt: Date): string {
+  let year = createdAt.getUTCFullYear()
+  let monthIndex = createdAt.getUTCMonth() // 0-11
+  const day = createdAt.getUTCDate()
+
+  // Rule: voucher prepared by the 15th. If registration is after 15th,
+  // first voucher is next month.
+  if (day > VOUCHER_CUTOFF_DAY) {
+    monthIndex += 1
+    if (monthIndex >= 12) {
+      monthIndex = 0
+      year += 1
+    }
+  }
+
+  return `${year}-${pad2(monthIndex + 1)}`
+}
+
+export function isIncludedInVoucherPeriod(createdAt: Date, voucherPeriod: string): boolean {
+  return firstVoucherPeriodForCreatedAt(createdAt) <= voucherPeriod
+}
+
 export async function buildVoucherDataset(periodInput?: string): Promise<VoucherDataset> {
   const { period, start, end } = resolveVoucherPeriod(periodInput)
 
   const members = await prisma.user.findMany({
     where: {
       role: 'MEMBER',
-      status: 'ACTIVE',
+      status: { in: ['ACTIVE', 'PENDING'] },
       voucherEnabled: true,
       monthlyContribution: { gt: 0 },
     },
@@ -56,18 +83,15 @@ export async function buildVoucherDataset(periodInput?: string): Promise<Voucher
       staffId: true,
       monthlyContribution: true,
       createdAt: true,
-      vouchers: {
-        select: { effectiveStartDate: true },
-        orderBy: { effectiveStartDate: 'asc' },
-        take: 1,
-      },
     },
     orderBy: [{ staffId: 'asc' }, { name: 'asc' }],
   })
 
-  const rows: VoucherRow[] = members.map((member, index) => {
-    const membershipStartDate = member.vouchers?.[0]?.effectiveStartDate || member.createdAt
-    const isNewMember = membershipStartDate >= start && membershipStartDate < end
+  const included = members.filter((member) => isIncludedInVoucherPeriod(member.createdAt, period))
+
+  const rows: VoucherRow[] = included.map((member, index) => {
+    const firstPeriod = firstVoucherPeriodForCreatedAt(member.createdAt)
+    const isNewMember = firstPeriod === period
     const memberFee = isNewMember ? 1000 : 100
     const monthlySavings = member.monthlyContribution || 0
 
