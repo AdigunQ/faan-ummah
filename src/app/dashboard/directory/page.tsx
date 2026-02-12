@@ -37,7 +37,7 @@ async function updateMemberLedger(formData: FormData) {
 
   revalidatePath('/dashboard/directory')
   revalidatePath('/dashboard')
-  redirect(`/dashboard/directory?saved=${encodeURIComponent(userId)}`)
+  redirect(`/dashboard/directory?saved=${encodeURIComponent(userId)}#member-${encodeURIComponent(userId)}`)
 }
 
 export default async function DirectoryPage({
@@ -134,7 +134,7 @@ export default async function DirectoryPage({
               const justSaved = member.id === savedMemberId
 
               return (
-                <tr key={member.id} className="hover:bg-gray-50">
+                <tr key={member.id} id={`member-${member.id}`} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
                   <Link
                     href={`/dashboard/directory/${member.id}`}
