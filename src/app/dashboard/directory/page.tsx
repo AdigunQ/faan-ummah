@@ -6,6 +6,10 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
+type SearchParams = {
+  saved?: string
+}
+
 async function updateMemberLedger(formData: FormData) {
   'use server'
 
@@ -36,9 +40,14 @@ async function updateMemberLedger(formData: FormData) {
 
   revalidatePath('/dashboard/directory')
   revalidatePath('/dashboard')
+  redirect(`/dashboard/directory?saved=${encodeURIComponent(userId)}`)
 }
 
-export default async function DirectoryPage() {
+export default async function DirectoryPage({
+  searchParams,
+}: {
+  searchParams?: SearchParams
+}) {
   const session = await getServerSession(authOptions)
 
   if (!session?.user?.email) {
@@ -78,6 +87,7 @@ export default async function DirectoryPage() {
 
   const activeCount = members.filter((member) => member.status === 'ACTIVE').length
   const pendingCount = members.filter((member) => member.status === 'PENDING').length
+  const savedMember = searchParams?.saved ? members.find((m) => m.id === searchParams.saved) : undefined
 
   return (
     <div className="animate-fadeIn space-y-8">
@@ -85,6 +95,12 @@ export default async function DirectoryPage() {
         <h1 className="text-3xl font-bold text-gray-900">Member Directory</h1>
         <p className="mt-1 text-gray-500">Complete member profiles, balances, and contribution activity.</p>
       </div>
+
+      {searchParams?.saved && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Saved changes{savedMember?.name ? ` for ${savedMember.name}` : ''}.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <MetricCard label="Total Members" value={members.length.toString()} tone="blue" />

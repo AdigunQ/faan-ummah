@@ -6,6 +6,10 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency } from '@/lib/utils'
 
+type SearchParams = {
+  saved?: string
+}
+
 async function updateMemberRecord(formData: FormData) {
   'use server'
 
@@ -40,12 +44,15 @@ async function updateMemberRecord(formData: FormData) {
   revalidatePath(`/dashboard/directory/${memberId}`)
   revalidatePath('/dashboard/directory')
   revalidatePath('/dashboard')
+  redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?saved=1`)
 }
 
 export default async function MemberProfileEditorPage({
   params,
+  searchParams,
 }: {
   params: { memberId: string }
+  searchParams?: SearchParams
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) redirect('/login')
@@ -88,6 +95,12 @@ export default async function MemberProfileEditorPage({
           Back to Directory
         </Link>
       </div>
+
+      {searchParams?.saved === '1' && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Saved changes for {member.name || 'member'}.
+        </div>
+      )}
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">{member.name || 'Unnamed Member'}</h2>
