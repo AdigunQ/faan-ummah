@@ -22,6 +22,7 @@ interface MemberDashboardProps {
     email: string
     status: string
     balance: number
+    specialBalance: number
     totalContributions: number
     loanBalance: number
     monthlyContribution: number | null
@@ -73,20 +74,15 @@ export function MemberDashboard({
       </div>
 
       <div className="relative mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Total Savings" value={formatCurrency(user.balance)} icon={Wallet} tone="emerald" />
+        <StatCard title="Monthly Savings" value={formatCurrency(user.balance)} icon={PiggyBank} tone="emerald" />
+        <StatCard title="Special Savings" value={formatCurrency(user.specialBalance)} icon={Wallet} tone="violet" />
         <StatCard title="Active Loan" value={formatCurrency(user.loanBalance)} icon={HandCoins} tone="amber" />
-        <StatCard
-          title="Contributions"
-          value={formatCurrency(user.totalContributions)}
-          icon={PiggyBank}
-          tone="blue"
-        />
         <StatCard
           title="Loan Eligibility"
           value={formatCurrency(loanEligibility)}
           icon={TrendingUp}
-          tone="violet"
-          subtitle="Maximum 2x your savings"
+          tone="blue"
+          subtitle="2x Monthly Savings"
         />
       </div>
 
