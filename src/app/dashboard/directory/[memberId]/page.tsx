@@ -18,20 +18,26 @@ async function updateMemberRecord(formData: FormData) {
 
   const memberId = String(formData.get('memberId') || '')
   const monthlyContribution = Number(formData.get('monthlyContribution') || 0)
+  const specialContribution = Number(formData.get('specialContribution') || 0)
   const balance = Number(formData.get('balance') || 0)
+  const specialBalance = Number(formData.get('specialBalance') || 0)
   const loanBalance = Number(formData.get('loanBalance') || 0)
   const voucherEnabled = String(formData.get('voucherEnabled') || 'true') === 'true'
 
   if (!memberId) return
   if (!Number.isFinite(monthlyContribution) || monthlyContribution < 0) return
+  if (!Number.isFinite(specialContribution) || specialContribution < 0) return
   if (!Number.isFinite(balance) || balance < 0) return
+  if (!Number.isFinite(specialBalance) || specialBalance < 0) return
   if (!Number.isFinite(loanBalance) || loanBalance < 0) return
 
   await prisma.user.update({
     where: { id: memberId },
     data: {
       monthlyContribution,
+      specialContribution,
       balance,
+      specialBalance,
       loanBalance,
       voucherEnabled,
     },
@@ -67,7 +73,9 @@ export default async function MemberProfileEditorPage({
       bankAccountNumber: true,
       bankAccountName: true,
       monthlyContribution: true,
+      specialContribution: true,
       balance: true,
+      specialBalance: true,
       totalContributions: true,
       loanBalance: true,
       status: true,
@@ -109,6 +117,7 @@ export default async function MemberProfileEditorPage({
           <p><span className="font-medium text-gray-800">Bank:</span> {member.bankName || 'N/A'} / {member.bankAccountNumber || 'N/A'}</p>
           <p><span className="font-medium text-gray-800">Account Name:</span> {member.bankAccountName || 'N/A'}</p>
           <p><span className="font-medium text-gray-800">Current Savings:</span> {formatCurrency(member.balance)}</p>
+          <p><span className="font-medium text-gray-800">Current Special Savings:</span> {formatCurrency(member.specialBalance || 0)}</p>
           <p><span className="font-medium text-gray-800">Current Loan Balance:</span> {formatCurrency(member.loanBalance)}</p>
           <p><span className="font-medium text-gray-800">Total Contributions:</span> {formatCurrency(member.totalContributions)}</p>
           <p><span className="font-medium text-gray-800">Status:</span> {member.status}</p>
@@ -133,6 +142,18 @@ export default async function MemberProfileEditorPage({
           </div>
 
           <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Special Savings Amount</label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              name="specialContribution"
+              defaultValue={member.specialContribution || 0}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+            />
+          </div>
+
+          <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Savings Balance</label>
             <input
               type="number"
@@ -140,6 +161,18 @@ export default async function MemberProfileEditorPage({
               step={1}
               name="balance"
               defaultValue={member.balance}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Special Savings Balance</label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              name="specialBalance"
+              defaultValue={member.specialBalance || 0}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
             />
           </div>

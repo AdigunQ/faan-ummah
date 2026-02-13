@@ -18,19 +18,25 @@ async function updateMemberLedger(formData: FormData) {
 
   const userId = String(formData.get('userId') || '')
   const monthlyContribution = Number(formData.get('monthlyContribution') || 0)
+  const specialContribution = Number(formData.get('specialContribution') || 0)
   const balance = Number(formData.get('balance') || 0)
+  const specialBalance = Number(formData.get('specialBalance') || 0)
   const loanBalance = Number(formData.get('loanBalance') || 0)
 
   if (!userId) return
   if (!Number.isFinite(monthlyContribution) || monthlyContribution < 0) return
+  if (!Number.isFinite(specialContribution) || specialContribution < 0) return
   if (!Number.isFinite(balance) || balance < 0) return
+  if (!Number.isFinite(specialBalance) || specialBalance < 0) return
   if (!Number.isFinite(loanBalance) || loanBalance < 0) return
 
   await prisma.user.update({
     where: { id: userId },
     data: {
       monthlyContribution,
+      specialContribution,
       balance,
+      specialBalance,
       loanBalance,
     },
   })
@@ -69,7 +75,9 @@ export default async function DirectoryPage({
       bankAccountNumber: true,
       status: true,
       monthlyContribution: true,
+      specialContribution: true,
       balance: true,
+      specialBalance: true,
       totalContributions: true,
       loanBalance: true,
       createdAt: true,
@@ -106,13 +114,13 @@ export default async function DirectoryPage({
         <MetricCard label="Other Status" value={otherCount.toString()} tone="amber" />
         <MetricCard
           label="Total Savings"
-          value={formatCurrency(members.reduce((sum, member) => sum + member.balance, 0))}
+          value={formatCurrency(members.reduce((sum, member) => sum + member.balance + (member.specialBalance || 0), 0))}
           tone="purple"
         />
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-        <table className="w-full min-w-[980px]">
+        <table className="w-full min-w-[1220px]">
           <thead className="bg-gray-50">
             <tr>
               <HeadCell label="Member" />
@@ -121,8 +129,10 @@ export default async function DirectoryPage({
               <HeadCell label="Contact" />
               <HeadCell label="Bank Details" />
               <HeadCell label="Status" />
-              <HeadCell label="Monthly Contribution" />
-              <HeadCell label="Savings" />
+              <HeadCell label="Savings (Monthly)" />
+              <HeadCell label="Special (Monthly)" />
+              <HeadCell label="Savings Balance" />
+              <HeadCell label="Special Balance" />
               <HeadCell label="Loan Balance" />
               <HeadCell label="Activity" />
               <HeadCell label="Joined" />
@@ -156,7 +166,13 @@ export default async function DirectoryPage({
                 <td className="px-6 py-4 text-sm font-medium text-gray-800">
                   {formatCurrency(member.monthlyContribution || 0)}
                 </td>
+                <td className="px-6 py-4 text-sm font-medium text-gray-800">
+                  {formatCurrency(member.specialContribution || 0)}
+                </td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-800">{formatCurrency(member.balance)}</td>
+                <td className="px-6 py-4 text-sm font-medium text-gray-800">
+                  {formatCurrency(member.specialBalance || 0)}
+                </td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-800">
                   {formatCurrency(member.loanBalance)}
                 </td>
@@ -165,7 +181,7 @@ export default async function DirectoryPage({
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">{formatDate(member.createdAt)}</td>
                 <td className="px-6 py-4">
-                  <form action={updateMemberLedger} className="grid w-[340px] grid-cols-2 gap-2">
+                  <form action={updateMemberLedger} className="grid w-[420px] grid-cols-2 gap-2">
                     <input type="hidden" name="userId" value={member.id} />
                     <input
                       type="number"
@@ -180,10 +196,28 @@ export default async function DirectoryPage({
                       type="number"
                       min={0}
                       step={1}
+                      name="specialContribution"
+                      defaultValue={member.specialContribution || 0}
+                      className="rounded border border-gray-300 px-2 py-1 text-xs"
+                      title="Monthly special savings"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
                       name="balance"
                       defaultValue={member.balance}
                       className="rounded border border-gray-300 px-2 py-1 text-xs"
                       title="Savings balance"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      name="specialBalance"
+                      defaultValue={member.specialBalance || 0}
+                      className="rounded border border-gray-300 px-2 py-1 text-xs"
+                      title="Special savings balance"
                     />
                     <input
                       type="number"

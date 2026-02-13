@@ -46,7 +46,7 @@ export default async function AnalyticsPage() {
       prisma.user.aggregate({
         where: { role: 'MEMBER', status: 'ACTIVE' },
         _count: { _all: true },
-        _sum: { balance: true, totalContributions: true, loanBalance: true },
+        _sum: { balance: true, specialBalance: true, totalContributions: true, loanBalance: true },
       }),
       prisma.user.groupBy({
         by: ['status'],
@@ -69,14 +69,14 @@ export default async function AnalyticsPage() {
           role: 'MEMBER',
           status: 'ACTIVE',
           voucherEnabled: true,
-          monthlyContribution: { gt: 0 },
+          OR: [{ monthlyContribution: { gt: 0 } }, { specialContribution: { gt: 0 } }],
         },
-        select: { createdAt: true, monthlyContribution: true },
+        select: { createdAt: true, monthlyContribution: true, specialContribution: true },
       }),
     ])
 
   const totalMembers = memberStats._count._all || 0
-  const totalSavingsPool = memberStats._sum.balance || 0
+  const totalSavingsPool = (memberStats._sum.balance || 0) + (memberStats._sum.specialBalance || 0)
   const lifetimeContributions = memberStats._sum.totalContributions || 0
   const totalLoanBalanceMirror = memberStats._sum.loanBalance || 0
   const outstandingLoansCount = outstandingLoanAgg._count._all || 0
@@ -107,10 +107,10 @@ export default async function AnalyticsPage() {
             role: 'MEMBER',
             status: 'ACTIVE',
             voucherEnabled: true,
-            monthlyContribution: { gt: 0 },
+            OR: [{ monthlyContribution: { gt: 0 } }, { specialContribution: { gt: 0 } }],
             createdAt: { lt: end },
           },
-          select: { createdAt: true, monthlyContribution: true },
+          select: { createdAt: true, monthlyContribution: true, specialContribution: true },
         }),
       ])
 
@@ -119,7 +119,10 @@ export default async function AnalyticsPage() {
       const oldCount = Math.max(0, included.length - newCount)
 
       const voucherFees = newCount * 1000 + oldCount * 100
-      const voucherSavingsBasis = included.reduce((acc, member) => acc + (member.monthlyContribution || 0), 0)
+      const voucherSavingsBasis = included.reduce(
+        (acc, member) => acc + (member.monthlyContribution || 0) + (member.specialContribution || 0),
+        0
+      )
 
       return {
         period,
@@ -147,7 +150,10 @@ export default async function AnalyticsPage() {
   ).length
   const upcomingOldCount = Math.max(0, upcomingIncluded.length - upcomingNewCount)
   const upcomingFees = upcomingNewCount * 1000 + upcomingOldCount * 100
-  const upcomingSavingsBasis = upcomingIncluded.reduce((acc, member) => acc + (member.monthlyContribution || 0), 0)
+  const upcomingSavingsBasis = upcomingIncluded.reduce(
+    (acc, member) => acc + (member.monthlyContribution || 0) + (member.specialContribution || 0),
+    0
+  )
   const upcomingThriftTotal = upcomingSavingsBasis + upcomingFees
 
   return (
@@ -220,7 +226,7 @@ export default async function AnalyticsPage() {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Thrift Total</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Total Savings</p>
               <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{formatCurrency(upcomingThriftTotal)}</p>
             </div>
           </div>
@@ -245,7 +251,7 @@ export default async function AnalyticsPage() {
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">6-Month Pulse</h2>
-          <p className="mt-1 text-sm text-slate-500">Registrations, voucher fees, and deduction basis (savings).</p>
+          <p className="mt-1 text-sm text-slate-500">Registrations, voucher fees, and deduction basis (savings + special savings).</p>
 
           <div className="mt-5 grid grid-cols-1 gap-4">
             <TrendBars
@@ -265,7 +271,7 @@ export default async function AnalyticsPage() {
               valueFormatter={(v) => formatCurrency(v)}
             />
             <TrendBars
-              title="Savings deduction basis"
+              title="Savings deduction basis (savings + special)"
               subtitle={`${formatCurrency(sixMonthSavingsBasis)} total`}
               rows={trends.map((row) => ({ label: row.label, value: row.voucherSavingsBasis }))}
               max={savingsMax}

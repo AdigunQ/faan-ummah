@@ -8,8 +8,9 @@ export type VoucherRow = {
   staffId: string
   name: string
   monthlySavings: number
+  specialSavings: number
   memberFee: number
-  thriftSavings: number
+  totalSavings: number
   memberType: 'NEW' | 'OLD'
 }
 
@@ -20,8 +21,9 @@ export type VoucherDataset = {
   rows: VoucherRow[]
   totals: {
     monthlySavings: number
+    specialSavings: number
     fees: number
-    thriftSavings: number
+    totalSavings: number
     newMembers: number
     oldMembers: number
   }
@@ -76,12 +78,13 @@ export async function buildVoucherDataset(periodInput?: string): Promise<Voucher
       role: 'MEMBER',
       status: 'ACTIVE',
       voucherEnabled: true,
-      monthlyContribution: { gt: 0 },
+      OR: [{ monthlyContribution: { gt: 0 } }, { specialContribution: { gt: 0 } }],
     },
     select: {
       name: true,
       staffId: true,
       monthlyContribution: true,
+      specialContribution: true,
       createdAt: true,
     },
     orderBy: [{ staffId: 'asc' }, { name: 'asc' }],
@@ -94,14 +97,16 @@ export async function buildVoucherDataset(periodInput?: string): Promise<Voucher
     const isNewMember = firstPeriod === period
     const memberFee = isNewMember ? 1000 : 100
     const monthlySavings = member.monthlyContribution || 0
+    const specialSavings = member.specialContribution || 0
 
     return {
       serial: index + 1,
       staffId: member.staffId || 'N/A',
       name: member.name || 'Unnamed Member',
       monthlySavings,
+      specialSavings,
       memberFee,
-      thriftSavings: monthlySavings + memberFee,
+      totalSavings: monthlySavings + specialSavings + memberFee,
       memberType: isNewMember ? 'NEW' : 'OLD',
     }
   })
@@ -109,13 +114,14 @@ export async function buildVoucherDataset(periodInput?: string): Promise<Voucher
   const totals = rows.reduce(
     (acc, row) => {
       acc.monthlySavings += row.monthlySavings
+      acc.specialSavings += row.specialSavings
       acc.fees += row.memberFee
-      acc.thriftSavings += row.thriftSavings
+      acc.totalSavings += row.totalSavings
       if (row.memberType === 'NEW') acc.newMembers += 1
       else acc.oldMembers += 1
       return acc
     },
-    { monthlySavings: 0, fees: 0, thriftSavings: 0, newMembers: 0, oldMembers: 0 }
+    { monthlySavings: 0, specialSavings: 0, fees: 0, totalSavings: 0, newMembers: 0, oldMembers: 0 }
   )
 
   return { period, start, end, rows, totals }
@@ -133,7 +139,7 @@ export function buildVoucherCsv(dataset: VoucherDataset): string {
   const lines = [
     ['', '', VOUCHER_TITLE, ''],
     ['S/N', 'Staff ID', 'Name', 'Thrift Savings'],
-    ...dataset.rows.map((row) => [row.serial, row.staffId, row.name, row.thriftSavings]),
+    ...dataset.rows.map((row) => [row.serial, row.staffId, row.name, row.totalSavings]),
   ]
 
   return lines

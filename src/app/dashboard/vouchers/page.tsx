@@ -61,7 +61,7 @@ export default async function VouchersPage({
         <MetricCard label="New Members" value={dataset.totals.newMembers.toString()} tone="green" />
         <MetricCard label="Old Members" value={dataset.totals.oldMembers.toString()} tone="amber" />
         <MetricCard label="Fees Total" value={formatCurrency(dataset.totals.fees)} tone="purple" />
-        <MetricCard label="Thrift Total" value={formatCurrency(dataset.totals.thriftSavings)} tone="slate" />
+        <MetricCard label="Total Savings" value={formatCurrency(dataset.totals.totalSavings)} tone="slate" />
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -73,16 +73,17 @@ export default async function VouchersPage({
           <div className="px-6 py-10 text-center text-gray-500">No active members available for voucher export.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-sm">
+            <table className="w-full min-w-[1080px] text-sm">
               <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
                 <tr>
                   <th className="px-6 py-3">S/N</th>
                   <th className="px-6 py-3">Staff ID</th>
                   <th className="px-6 py-3">Name</th>
-                  <th className="px-6 py-3">Monthly Savings</th>
+                  <th className="px-6 py-3">Savings</th>
+                  <th className="px-6 py-3">Special Savings</th>
                   <th className="px-6 py-3">Member Fee</th>
                   <th className="px-6 py-3">Member Type</th>
-                  <th className="px-6 py-3">Thrift Savings</th>
+                  <th className="px-6 py-3">Total Savings</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -92,6 +93,7 @@ export default async function VouchersPage({
                     <td className="px-6 py-3 font-medium text-gray-800">{row.staffId}</td>
                     <td className="px-6 py-3 text-gray-900">{row.name}</td>
                     <td className="px-6 py-3 text-gray-800">{formatCurrency(row.monthlySavings)}</td>
+                    <td className="px-6 py-3 text-gray-800">{formatCurrency(row.specialSavings)}</td>
                     <td className="px-6 py-3 text-gray-800">{formatCurrency(row.memberFee)}</td>
                     <td className="px-6 py-3">
                       <span
@@ -104,7 +106,7 @@ export default async function VouchersPage({
                         {row.memberType}
                       </span>
                     </td>
-                    <td className="px-6 py-3 font-semibold text-gray-900">{formatCurrency(row.thriftSavings)}</td>
+                    <td className="px-6 py-3 font-semibold text-gray-900">{formatCurrency(row.totalSavings)}</td>
                   </tr>
                 ))}
               </tbody>
