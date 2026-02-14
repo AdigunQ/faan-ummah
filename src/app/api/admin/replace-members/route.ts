@@ -52,6 +52,21 @@ function toText(value: unknown): string {
   return String(value ?? '').trim()
 }
 
+function normalizeStaffId(value: unknown): string {
+  // Staff IDs in the spreadsheets are typically 6 digits with leading zeros.
+  // Excel sometimes coerces them into numbers, which would drop the leading zeros.
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(Math.trunc(value)).padStart(6, '0')
+  }
+
+  const raw = toText(value)
+  const cleaned = raw.replace(/\s+/g, '')
+  if (/^\d+$/.test(cleaned) && cleaned.length > 0 && cleaned.length < 6) {
+    return cleaned.padStart(6, '0')
+  }
+  return cleaned
+}
+
 function findHeaderRow(rows: any[][], requiredHeaders: string[]): { headerIndex: number; indexByHeader: Record<string, number> } {
   for (let i = 0; i < Math.min(rows.length, 25); i += 1) {
     const row = rows[i] || []
@@ -88,7 +103,7 @@ function parseSavingsWorkbook(buffer: Buffer): Map<string, SavingsRow> {
   const out = new Map<string, SavingsRow>()
   for (let i = headerIndex + 1; i < rows.length; i += 1) {
     const row = rows[i] || []
-    const staffId = toText(row[staffIdIdx])
+    const staffId = normalizeStaffId(row[staffIdIdx])
     if (!staffId) continue
     const name = toText(row[nameIdx]) || 'Unnamed Member'
     const thriftTotal = toNumber(row[thriftIdx])
@@ -136,7 +151,7 @@ function parseSpecialWorkbook(buffer: Buffer): Map<string, SpecialRow> {
   const out = new Map<string, SpecialRow>()
   for (let i = headerIndex + 1; i < rows.length; i += 1) {
     const row = rows[i] || []
-    const staffId = toText(row[staffIdIdx])
+    const staffId = normalizeStaffId(row[staffIdIdx])
     if (!staffId) continue
     const name = toText(row[nameIdx]) || 'Unnamed Member'
     const thriftSavings = toNumber(row[thriftIdx])
