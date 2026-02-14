@@ -168,8 +168,12 @@ function mergeRows(savingsRows: Map<string, SavingsRow>, specialRows: Map<string
     const special = specialRows.get(staffId)
 
     const name = special?.name || savings?.name || 'Unnamed Member'
-    const monthlySavings = special?.thriftSavings ?? 0
+    // Special sheet (when present) splits Monthly vs Special savings.
+    // If the special sheet doesn't include a staffId, assume they are not doing special savings
+    // and infer monthly savings from the Savings sheet total (minus old-member fee).
     const specialSavings = special?.specialSaving ?? 0
+    const monthlySavings =
+      special?.thriftSavings ?? Math.max(0, (savings?.thriftTotal ?? 0) - 100 - specialSavings)
     const savingsSheetTotal = savings?.thriftTotal
     const warnings: string[] = []
 
