@@ -7,14 +7,13 @@ import toast from 'react-hot-toast'
 type PreviewResponse = {
   ok: boolean
   error?: string
+  sheetName?: string
+  globalWarnings?: string[]
   counts?: {
-    mergedMembers: number
-    savingsRows: number
-    specialRows: number
+    members: number
     withSpecialSavings: number
-    missingInSpecial: number
-    missingInSavings: number
-    mismatchedTotals: number
+    joinDates: number
+    warningRows: number
   }
   sample?: Array<{
     staffId: string
@@ -22,33 +21,32 @@ type PreviewResponse = {
     monthlySavings: number
     specialSavings: number
     phone?: string
+    joinedAt?: string
     warnings: string[]
   }>
 }
 
 export default function ImportMembersClient() {
-  const [savingsFile, setSavingsFile] = useState<File | null>(null)
-  const [specialFile, setSpecialFile] = useState<File | null>(null)
+  const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<PreviewResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [confirmText, setConfirmText] = useState('')
 
-  const canPreview = Boolean(savingsFile && specialFile && !isLoading)
+  const canPreview = Boolean(file && !isLoading)
   const canReplace = Boolean(preview?.ok && confirmText === 'REPLACE MEMBERS' && !isLoading)
 
   const warningSummary = useMemo(() => {
     const counts = preview?.counts
     if (!counts) return null
     const warnings: string[] = []
-    if (counts.missingInSavings > 0) warnings.push(`${counts.missingInSavings} missing in Savings.xlsx`)
-    if (counts.missingInSpecial > 0) warnings.push(`${counts.missingInSpecial} missing in Special Saving.xlsx`)
-    if (counts.mismatchedTotals > 0) warnings.push(`${counts.mismatchedTotals} total mismatches`)
+    if (counts.warningRows > 0) warnings.push(`${counts.warningRows} row(s) with warnings`)
+    if (counts.joinDates > 0) warnings.push(`${counts.joinDates} join dates detected`)
     return warnings
   }, [preview])
 
   async function post(mode: 'preview' | 'replace') {
-    if (!savingsFile || !specialFile) {
-      toast.error('Please upload both files.')
+    if (!file) {
+      toast.error('Please upload the Excel file.')
       return
     }
 
@@ -56,8 +54,7 @@ export default function ImportMembersClient() {
     try {
       const formData = new FormData()
       formData.append('mode', mode)
-      formData.append('savings', savingsFile)
-      formData.append('special', specialFile)
+      formData.append('file', file)
       if (mode === 'replace') formData.append('confirm', confirmText)
 
       const res = await fetch('/api/admin/replace-members', {
@@ -103,28 +100,18 @@ export default function ImportMembersClient() {
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="grid gap-6 md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-900">Savings.xlsx</label>
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={(e) => setSavingsFile(e.target.files?.[0] || null)}
-              className="block w-full text-sm"
-            />
-            <p className="mt-2 text-xs text-gray-500">Expected: sheet with Staff ID, Name, Thrift Savings (total).</p>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-900">Special Saving.xlsx</label>
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={(e) => setSpecialFile(e.target.files?.[0] || null)}
-              className="block w-full text-sm"
-            />
-            <p className="mt-2 text-xs text-gray-500">Expected: sheet with Staff ID, Name, Thrift Savings, Special Saving.</p>
-          </div>
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-900">Members Excel File (.xlsx)</label>
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="block w-full text-sm"
+          />
+          <p className="mt-2 text-xs text-gray-500">
+            Required columns: Staff ID, Name, Thrift Savings. Optional: Special Saving, Month Joined, Phone. If multiple
+            sheets exist, the importer uses the most complete sheet (prefers “feb 2026”).
+          </p>
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
@@ -152,17 +139,28 @@ export default function ImportMembersClient() {
             {preview.error && <p className="mt-1 text-sm text-red-600">{preview.error}</p>}
             {preview.ok && preview.counts && (
               <p className="mt-1 text-sm text-gray-500">
-                {preview.counts.mergedMembers} members • {preview.counts.withSpecialSavings} with special savings
+                {preview.counts.members} members • {preview.counts.withSpecialSavings} with special savings
+              </p>
+            )}
+            {preview.ok && preview.sheetName && (
+              <p className="mt-1 text-xs text-gray-500">
+                Source sheet: <span className="font-mono">{preview.sheetName}</span>
               </p>
             )}
           </div>
 
           {preview.ok && preview.counts && (
             <div className="grid grid-cols-2 gap-4 px-6 py-5 md:grid-cols-4">
-              <Stat label="Savings rows" value={preview.counts.savingsRows} />
-              <Stat label="Special rows" value={preview.counts.specialRows} />
-              <Stat label="Missing in Special" value={preview.counts.missingInSpecial} />
-              <Stat label="Mismatched totals" value={preview.counts.mismatchedTotals} />
+              <Stat label="Members" value={preview.counts.members} />
+              <Stat label="With special savings" value={preview.counts.withSpecialSavings} />
+              <Stat label="Join dates" value={preview.counts.joinDates} />
+              <Stat label="Warning rows" value={preview.counts.warningRows} />
+            </div>
+          )}
+
+          {preview.ok && preview.globalWarnings && preview.globalWarnings.length > 0 && (
+            <div className="px-6 pb-4 text-sm text-amber-700">
+              Notes: {preview.globalWarnings.join(' • ')}
             </div>
           )}
 
@@ -181,6 +179,7 @@ export default function ImportMembersClient() {
                     <th className="px-6 py-3">Name</th>
                     <th className="px-6 py-3">Monthly Savings</th>
                     <th className="px-6 py-3">Special Savings</th>
+                    <th className="px-6 py-3">Joined</th>
                     <th className="px-6 py-3">Warnings</th>
                   </tr>
                 </thead>
@@ -191,6 +190,7 @@ export default function ImportMembersClient() {
                       <td className="px-6 py-3 text-gray-900">{row.name}</td>
                       <td className="px-6 py-3 text-gray-800">₦{Number(row.monthlySavings || 0).toLocaleString()}</td>
                       <td className="px-6 py-3 text-gray-800">₦{Number(row.specialSavings || 0).toLocaleString()}</td>
+                      <td className="px-6 py-3 text-gray-700">{row.joinedAt || '—'}</td>
                       <td className="px-6 py-3 text-xs text-amber-700">
                         {row.warnings?.length ? row.warnings.join(' • ') : '—'}
                       </td>
@@ -239,4 +239,3 @@ function Stat({ label, value }: { label: string; value: number }) {
     </div>
   )
 }
-

@@ -7,27 +7,13 @@ import { authOptions } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
-type SavingsRow = {
-  staffId: string
-  name: string
-  thriftTotal: number
-}
-
-type SpecialRow = {
-  staffId: string
-  name: string
-  thriftSavings: number
-  specialSaving: number
-  phone?: string
-}
-
 type ImportMember = {
   staffId: string
   name: string
   monthlySavings: number
   specialSavings: number
   phone?: string
-  savingsSheetTotal?: number
+  joinedAt?: string // YYYY-MM-DD
   warnings: string[]
 }
 
@@ -67,7 +53,103 @@ function normalizeStaffId(value: unknown): string {
   return cleaned
 }
 
-function findHeaderRow(rows: any[][], requiredHeaders: string[]): { headerIndex: number; indexByHeader: Record<string, number> } {
+function excelSerialToUtcDate(serial: number): Date {
+  // Excel stores dates as days since 1900-01-00. The 25569 offset brings us to 1970-01-01.
+  const utcDays = Math.floor(serial - 25569)
+  return new Date(utcDays * 86400 * 1000)
+}
+
+function parseJoinDate(value: unknown): Date | null {
+  if (value instanceof Date && !Number.isNaN(value.valueOf())) return value
+
+  if (typeof value === 'number' && Number.isFinite(value) && value > 30000) {
+    const date = excelSerialToUtcDate(value)
+    return Number.isNaN(date.valueOf()) ? null : date
+  }
+
+  const raw = toText(value)
+  if (!raw) return null
+
+  const cleaned = raw
+    .toLowerCase()
+    .replace(/^0ctober/, 'october')
+    .replace(/^0ct/, 'oct')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // dd/mm/yyyy or dd-mm-yyyy
+  const m1 = cleaned.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/)
+  if (m1) {
+    const day = Number(m1[1])
+    const month = Number(m1[2])
+    const year = Number(m1[3])
+    if (year >= 2000 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return new Date(Date.UTC(year, month - 1, day))
+    }
+  }
+
+  // "october 2025" / "oct 2025"
+  const m2 = cleaned.match(/^([a-z]{3,9})\s+(\d{4})$/)
+  if (m2) {
+    const monthToken = m2[1]
+    const year = Number(m2[2])
+    const months: Record<string, number> = {
+      jan: 0,
+      january: 0,
+      feb: 1,
+      february: 1,
+      mar: 2,
+      march: 2,
+      apr: 3,
+      april: 3,
+      may: 4,
+      jun: 5,
+      june: 5,
+      jul: 6,
+      july: 6,
+      aug: 7,
+      august: 7,
+      sep: 8,
+      sept: 8,
+      september: 8,
+      oct: 9,
+      october: 9,
+      nov: 10,
+      november: 10,
+      dec: 11,
+      december: 11,
+    }
+    const monthIndex = months[monthToken]
+    if (monthIndex !== undefined && year >= 2000) {
+      return new Date(Date.UTC(year, monthIndex, 1))
+    }
+  }
+
+  const parsed = new Date(cleaned)
+  if (!Number.isNaN(parsed.valueOf())) {
+    return new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate()))
+  }
+
+  return null
+}
+
+function isoDateOnly(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+function findColumnIndex(indexByHeader: Record<string, number>, candidates: string[]): number | undefined {
+  for (let i = 0; i < candidates.length; i += 1) {
+    const key = normalizeHeader(candidates[i])
+    const index = indexByHeader[key]
+    if (index !== undefined) return index
+  }
+  return undefined
+}
+
+function detectHeaderRow(
+  rows: any[][],
+  candidates: { staff: string[]; name: string[]; thrift: string[] }
+): { headerIndex: number; indexByHeader: Record<string, number> } | null {
   for (let i = 0; i < Math.min(rows.length, 25); i += 1) {
     const row = rows[i] || []
     const indexByHeader: Record<string, number> = {}
@@ -76,90 +158,177 @@ function findHeaderRow(rows: any[][], requiredHeaders: string[]): { headerIndex:
       if (key) indexByHeader[key] = idx
     })
 
-    const hasAll = requiredHeaders.every((header) => indexByHeader[normalizeHeader(header)] !== undefined)
-    if (hasAll) {
+    const staffIdIdx = findColumnIndex(indexByHeader, candidates.staff)
+    const nameIdx = findColumnIndex(indexByHeader, candidates.name)
+    const thriftIdx = findColumnIndex(indexByHeader, candidates.thrift)
+
+    if (staffIdIdx !== undefined && nameIdx !== undefined && thriftIdx !== undefined) {
       return { headerIndex: i, indexByHeader }
     }
   }
 
-  return { headerIndex: -1, indexByHeader: {} }
+  return null
 }
 
-function parseSavingsWorkbook(buffer: Buffer): Map<string, SavingsRow> {
-  const wb = XLSX.read(buffer, { type: 'buffer' })
-  const firstSheet = wb.SheetNames[0]
-  const ws = wb.Sheets[firstSheet]
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' }) as any[][]
+function chooseSheet(wb: XLSX.WorkBook): { sheetName: string; rows: any[][]; headerIndex: number; indexByHeader: Record<string, number> } {
+  const preferredSheet = wb.SheetNames.find((name) => normalizeHeader(name) === 'feb 2026')
 
-  const { headerIndex, indexByHeader } = findHeaderRow(rows, ['staff id', 'name', 'thrift savings'])
-  if (headerIndex < 0) {
-    throw new Error('Savings.xlsx: could not find the header row containing Staff ID, Name, and Thrift Savings.')
+  const candidates = {
+    staff: ['staff id', 'employee no.', 'employee no', 'employee number', 'employee id'],
+    name: ['name', 'employee name', 'full name'],
+    thrift: ['thrift savings', 'monthly savings', 'savings (monthly)', 'monthly contribution', 'monthly savings amount'],
   }
 
-  const staffIdIdx = indexByHeader['staff id']
-  const nameIdx = indexByHeader['name']
-  const thriftIdx = indexByHeader['thrift savings']
+  const eligible: Array<{
+    sheetName: string
+    rows: any[][]
+    headerIndex: number
+    indexByHeader: Record<string, number>
+    dataRows: number
+    orderIndex: number
+  }> = []
 
-  const out = new Map<string, SavingsRow>()
-  for (let i = headerIndex + 1; i < rows.length; i += 1) {
-    const row = rows[i] || []
-    const staffId = normalizeStaffId(row[staffIdIdx])
-    if (!staffId) continue
-    const name = toText(row[nameIdx]) || 'Unnamed Member'
-    const thriftTotal = toNumber(row[thriftIdx])
-    out.set(staffId, { staffId, name, thriftTotal })
-  }
-  return out
-}
+  for (let s = 0; s < wb.SheetNames.length; s += 1) {
+    const sheetName = wb.SheetNames[s]
+    const ws = wb.Sheets[sheetName]
+    if (!ws) continue
 
-function findSpecialSheetName(wb: XLSX.WorkBook): string | undefined {
-  const preferred = wb.SheetNames.find((name) => normalizeHeader(name) === 'feb 2026')
-  if (preferred) return preferred
-
-  // fallback: find a sheet with the expected headers.
-  for (const name of wb.SheetNames) {
-    const ws = wb.Sheets[name]
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' }) as any[][]
-    const { headerIndex } = findHeaderRow(rows, ['staff id', 'name', 'thrift savings', 'special saving'])
-    if (headerIndex >= 0) return name
+    const header = detectHeaderRow(rows, candidates)
+    if (!header) continue
+
+    const staffIdx = findColumnIndex(header.indexByHeader, candidates.staff)
+    const dataRows = rows.slice(header.headerIndex + 1).filter((row) => normalizeStaffId((row || [])[staffIdx || 0])).length
+
+    eligible.push({
+      sheetName,
+      rows,
+      headerIndex: header.headerIndex,
+      indexByHeader: header.indexByHeader,
+      dataRows,
+      orderIndex: s,
+    })
   }
 
-  return undefined
+  if (eligible.length === 0) {
+    throw new Error('Excel import: could not find a sheet containing Staff ID, Name, and Thrift Savings columns.')
+  }
+
+  eligible.sort((a, b) => {
+    if (preferredSheet) {
+      if (a.sheetName === preferredSheet && b.sheetName !== preferredSheet) return -1
+      if (b.sheetName === preferredSheet && a.sheetName !== preferredSheet) return 1
+    }
+
+    if (b.dataRows !== a.dataRows) return b.dataRows - a.dataRows
+    return b.orderIndex - a.orderIndex
+  })
+
+  const chosen = eligible[0]
+  return {
+    sheetName: chosen.sheetName,
+    rows: chosen.rows,
+    headerIndex: chosen.headerIndex,
+    indexByHeader: chosen.indexByHeader,
+  }
 }
 
-function parseSpecialWorkbook(buffer: Buffer): Map<string, SpecialRow> {
+function parseMembersWorkbook(buffer: Buffer): { sheetName: string; members: ImportMember[]; globalWarnings: string[] } {
   const wb = XLSX.read(buffer, { type: 'buffer' })
-  const sheetName = findSpecialSheetName(wb)
-  if (!sheetName) {
-    throw new Error('Special Saving.xlsx: could not find a sheet containing Staff ID, Name, Thrift Savings, and Special Saving.')
+  const chosen = chooseSheet(wb)
+
+  const staffCandidates = ['staff id', 'employee no.', 'employee no', 'employee number', 'employee id']
+  const nameCandidates = ['name', 'employee name', 'full name']
+  const thriftCandidates = ['thrift savings', 'monthly savings', 'savings (monthly)', 'monthly contribution', 'monthly savings amount']
+  const specialCandidates = ['special saving', 'special savings', 'special (monthly)']
+  const phoneCandidates = ['phone', 'phone number', 'mobile', 'whatsapp', 'whatsapp number']
+  const joinedCandidates = ['month joined', 'joined', 'join date', 'date joined']
+  const chargesCandidates = ['monthly charges', 'charges']
+  const newMemberCandidates = ['new member fee', 'new member', 'new member fee']
+  const totalCandidates = ['total']
+
+  const staffIdIdx = findColumnIndex(chosen.indexByHeader, staffCandidates)
+  const nameIdx = findColumnIndex(chosen.indexByHeader, nameCandidates)
+  const thriftIdx = findColumnIndex(chosen.indexByHeader, thriftCandidates)
+  const specialIdx = findColumnIndex(chosen.indexByHeader, specialCandidates)
+  const phoneIdx = findColumnIndex(chosen.indexByHeader, phoneCandidates)
+  const joinedIdx = findColumnIndex(chosen.indexByHeader, joinedCandidates)
+  const chargesIdx = findColumnIndex(chosen.indexByHeader, chargesCandidates)
+  const newMemberIdx = findColumnIndex(chosen.indexByHeader, newMemberCandidates)
+  const totalIdx = findColumnIndex(chosen.indexByHeader, totalCandidates)
+
+  if (staffIdIdx === undefined || nameIdx === undefined || thriftIdx === undefined) {
+    throw new Error(`Excel import: required columns are missing in sheet "${chosen.sheetName}".`)
   }
 
-  const ws = wb.Sheets[sheetName]
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' }) as any[][]
+  const globalWarnings: string[] = []
+  if (specialIdx === undefined) globalWarnings.push('No Special Saving column detected; special savings will be imported as ₦0 for everyone.')
+  if (joinedIdx === undefined) globalWarnings.push('No Month Joined column detected; join dates will default to 2025-10-01.')
+  if (chargesIdx !== undefined) globalWarnings.push('Charges column detected. Ignored by importer.')
+  if (newMemberIdx !== undefined) globalWarnings.push('New Member fee column detected. Ignored by importer (fees are computed by join date).')
+  if (totalIdx !== undefined) globalWarnings.push('Total column detected. Ignored by importer (we use Thrift + Special only).')
 
-  const { headerIndex, indexByHeader } = findHeaderRow(rows, ['staff id', 'name', 'thrift savings', 'special saving'])
-  if (headerIndex < 0) {
-    throw new Error(`Special Saving.xlsx: could not find the header row in sheet "${sheetName}".`)
-  }
+  const members: ImportMember[] = []
+  const seen = new Set<string>()
+  let joinParsed = 0
+  let mod100Count = 0
+  let amountCount = 0
 
-  const staffIdIdx = indexByHeader['staff id']
-  const nameIdx = indexByHeader['name']
-  const thriftIdx = indexByHeader['thrift savings']
-  const specialIdx = indexByHeader['special saving']
-  const phoneIdx = indexByHeader['phone']
-
-  const out = new Map<string, SpecialRow>()
-  for (let i = headerIndex + 1; i < rows.length; i += 1) {
-    const row = rows[i] || []
+  for (let i = chosen.headerIndex + 1; i < chosen.rows.length; i += 1) {
+    const row = chosen.rows[i] || []
     const staffId = normalizeStaffId(row[staffIdIdx])
     if (!staffId) continue
+    if (seen.has(staffId)) {
+      throw new Error(`Duplicate Staff ID found in Excel: ${staffId}`)
+    }
+    seen.add(staffId)
+
     const name = toText(row[nameIdx]) || 'Unnamed Member'
-    const thriftSavings = toNumber(row[thriftIdx])
-    const specialSaving = toNumber(row[specialIdx])
-    const phone = phoneIdx !== undefined ? toText(row[phoneIdx]) : ''
-    out.set(staffId, { staffId, name, thriftSavings, specialSaving, phone: phone || undefined })
+    const monthlySavings = toNumber(row[thriftIdx])
+    const specialSavings = specialIdx === undefined ? 0 : toNumber(row[specialIdx])
+    const phone = phoneIdx === undefined ? '' : toText(row[phoneIdx])
+    const joinDate = joinedIdx === undefined ? null : parseJoinDate(row[joinedIdx])
+    if (joinDate) joinParsed += 1
+
+    if (monthlySavings > 0) {
+      amountCount += 1
+      if (monthlySavings % 1000 === 100) mod100Count += 1
+    }
+
+    const warnings: string[] = []
+    if (monthlySavings <= 0 && specialSavings <= 0) warnings.push('Monthly + special savings are ₦0')
+    if (joinedIdx !== undefined && !joinDate) warnings.push('Month Joined is missing/invalid')
+
+    const now = new Date()
+    if (joinDate && joinDate.valueOf() > now.valueOf()) warnings.push('Join date is in the future')
+
+    members.push({
+      staffId,
+      name,
+      monthlySavings,
+      specialSavings,
+      phone: phone || undefined,
+      joinedAt: joinDate ? isoDateOnly(joinDate) : undefined,
+      warnings,
+    })
   }
-  return out
+
+  members.sort((a, b) => a.staffId.localeCompare(b.staffId))
+
+  if (amountCount > 10) {
+    const ratio = mod100Count / amountCount
+    if (ratio >= 0.6) {
+      globalWarnings.push(
+        'Many Thrift Savings values end with 100. Ensure the column is monthly savings (not totals including fees).'
+      )
+    }
+  }
+
+  if (joinedIdx !== undefined) {
+    globalWarnings.push(`Parsed join dates for ${joinParsed}/${members.length} members.`)
+  }
+
+  return { sheetName: chosen.sheetName, members, globalWarnings }
 }
 
 function buildEmail(staffId: string): string {
@@ -171,49 +340,6 @@ function buildEmail(staffId: string): string {
   return `${local.toLowerCase()}@${domain.toLowerCase()}`
 }
 
-function mergeRows(savingsRows: Map<string, SavingsRow>, specialRows: Map<string, SpecialRow>): ImportMember[] {
-  const staffIds = new Set<string>()
-  savingsRows.forEach((_value, key) => staffIds.add(key))
-  specialRows.forEach((_value, key) => staffIds.add(key))
-  const list = Array.from(staffIds)
-  list.sort((a, b) => a.localeCompare(b))
-
-  return list.map((staffId) => {
-    const savings = savingsRows.get(staffId)
-    const special = specialRows.get(staffId)
-
-    const name = special?.name || savings?.name || 'Unnamed Member'
-    // Special sheet (when present) splits Monthly vs Special savings.
-    // If the special sheet doesn't include a staffId, assume they are not doing special savings
-    // and infer monthly savings from the Savings sheet total (minus old-member fee).
-    const specialSavings = special?.specialSaving ?? 0
-    const monthlySavings =
-      special?.thriftSavings ?? Math.max(0, (savings?.thriftTotal ?? 0) - 100 - specialSavings)
-    const savingsSheetTotal = savings?.thriftTotal
-    const warnings: string[] = []
-
-    if (!special) warnings.push('Missing in Special Saving.xlsx')
-    if (!savings) warnings.push('Missing in Savings.xlsx')
-
-    if (savingsSheetTotal !== undefined) {
-      const expectedOldTotal = monthlySavings + specialSavings + 100
-      if (Math.abs(expectedOldTotal - savingsSheetTotal) > 0.01) {
-        warnings.push(`Total mismatch vs Savings.xlsx (expected ₦${expectedOldTotal.toLocaleString()} got ₦${savingsSheetTotal.toLocaleString()})`)
-      }
-    }
-
-    return {
-      staffId,
-      name,
-      monthlySavings,
-      specialSavings,
-      phone: special?.phone,
-      savingsSheetTotal,
-      warnings,
-    }
-  })
-}
-
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email || session.user.role !== 'ADMIN') {
@@ -222,19 +348,15 @@ export async function POST(req: Request) {
 
   const formData = await req.formData()
   const mode = String(formData.get('mode') || 'preview')
-  const savingsFile = formData.get('savings')
-  const specialFile = formData.get('special')
+  const file = formData.get('file') || formData.get('members') || formData.get('special') || formData.get('savings')
 
-  if (!(savingsFile instanceof File) || !(specialFile instanceof File)) {
-    return NextResponse.json({ ok: false, error: 'Both Savings.xlsx and Special Saving.xlsx are required.' }, { status: 400 })
+  if (!(file instanceof File)) {
+    return NextResponse.json({ ok: false, error: 'Please upload the Excel file.' }, { status: 400 })
   }
 
-  const savingsBuffer = Buffer.from(await savingsFile.arrayBuffer())
-  const specialBuffer = Buffer.from(await specialFile.arrayBuffer())
-
-  const savingsRows = parseSavingsWorkbook(savingsBuffer)
-  const specialRows = parseSpecialWorkbook(specialBuffer)
-  const merged = mergeRows(savingsRows, specialRows)
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const parsed = parseMembersWorkbook(buffer)
+  const merged = parsed.members
 
   const duplicates = merged.filter((m) => !m.staffId).length
   if (duplicates > 0) {
@@ -242,22 +364,20 @@ export async function POST(req: Request) {
   }
 
   const withSpecial = merged.filter((m) => m.specialSavings > 0).length
-  const mismatches = merged.filter((m) => m.warnings.some((w) => w.startsWith('Total mismatch'))).length
-  const missingInSpecial = merged.filter((m) => m.warnings.includes('Missing in Special Saving.xlsx')).length
-  const missingInSavings = merged.filter((m) => m.warnings.includes('Missing in Savings.xlsx')).length
+  const joinDates = merged.filter((m) => Boolean(m.joinedAt)).length
+  const warningRows = merged.filter((m) => (m.warnings || []).length > 0).length
 
   if (mode !== 'replace') {
     return NextResponse.json({
       ok: true,
       mode: 'preview',
+      sheetName: parsed.sheetName,
+      globalWarnings: parsed.globalWarnings,
       counts: {
-        mergedMembers: merged.length,
-        savingsRows: savingsRows.size,
-        specialRows: specialRows.size,
+        members: merged.length,
         withSpecialSavings: withSpecial,
-        missingInSpecial,
-        missingInSavings,
-        mismatchedTotals: mismatches,
+        joinDates,
+        warningRows,
       },
       sample: merged.slice(0, 8),
     })
@@ -270,7 +390,7 @@ export async function POST(req: Request) {
 
   const passwordPlain = (process.env.DEFAULT_MEMBER_PASSWORD || 'member123').trim() || 'member123'
   const passwordHash = await bcrypt.hash(passwordPlain, 10)
-  const createdAt = new Date('2025-01-01T00:00:00.000Z') // ensure everyone is treated as an OLD member for voucher fees
+  const fallbackCreatedAt = new Date('2025-10-01T00:00:00.000Z')
 
   const data = merged.map((member) => ({
     email: buildEmail(member.staffId),
@@ -286,7 +406,7 @@ export async function POST(req: Request) {
     balance: 0,
     specialBalance: 0,
     voucherEnabled: true,
-    createdAt,
+    createdAt: member.joinedAt ? new Date(`${member.joinedAt}T00:00:00.000Z`) : fallbackCreatedAt,
   }))
 
   // hard-fail on duplicate emails or staff IDs before deleting anything
@@ -308,6 +428,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     mode: 'replace',
+    importedFromSheet: parsed.sheetName,
     ...result,
     defaultMemberLogin: {
       emailPattern: `<staffId>@${(process.env.MEMBER_EMAIL_DOMAIN || 'faan-ummah.coop').trim().replace(/^@/, '')}`,

@@ -14,7 +14,7 @@ export default async function ImportMembersPage() {
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Replace Members (Excel Import)</h1>
         <p className="mt-1 text-gray-500">
-          This will delete every current member and replace them with the members from your uploaded spreadsheets.
+          This will delete every current member and replace them with the members from your uploaded Excel file.
         </p>
       </div>
 
@@ -22,4 +22,3 @@ export default async function ImportMembersPage() {
     </div>
   )
 }
-
