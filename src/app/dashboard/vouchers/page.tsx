@@ -24,7 +24,7 @@ export default async function VouchersPage({
   return (
     <div className="animate-fadeIn space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Generate Voucher</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Generate Report</h1>
         <p className="mt-1 text-gray-500">
           Admin voucher table for monthly salary deductions. CSV export follows the uploaded spreadsheet format.
         </p>
