@@ -37,9 +37,18 @@ export default async function DirectoryPage() {
 
   return (
     <div className="animate-fadeIn space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Update Member</h1>
-        <p className="mt-1 text-gray-500">Click a member to update their savings, special savings, or loan records.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Update Member</h1>
+          <p className="mt-1 text-gray-500">Click a member to update their savings, special savings, or loan records.</p>
+        </div>
+
+        <Link
+          href="/dashboard/import-members"
+          className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+        >
+          Import from Excel
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
