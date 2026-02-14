@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { buildVoucherCsv, buildVoucherDataset, resolveVoucherPeriod } from '@/lib/vouchers'
+import { buildVoucherDataset, resolveVoucherPeriod } from '@/lib/vouchers'
 
 function escapeCsv(value: unknown): string {
   const raw = String(value ?? '')
@@ -12,11 +12,23 @@ function escapeCsv(value: unknown): string {
   return raw
 }
 
-function buildMonthCsv(columns: string[], rows: Array<Record<string, unknown>>): string {
-  const lines = [columns, ...rows.map((row) => columns.map((col) => row[col] ?? ''))]
-  return lines
-    .map((row) => row.map((cell) => escapeCsv(cell)).join(','))
-    .join('\n')
+function toNumber(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  const cleaned = String(value ?? '')
+    .replace(/,/g, '')
+    .trim()
+  if (!cleaned) return 0
+  const parsed = Number(cleaned)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function buildThreeColumnCsv(rows: Array<{ staffId: string; name: string; thriftSavings: number }>): string {
+  const lines: Array<Array<string | number>> = [
+    ['Staff ID', 'Name', 'Thrift Savings'],
+    ...rows.map((row) => [row.staffId, row.name, row.thriftSavings]),
+  ]
+
+  return lines.map((row) => row.map((cell) => escapeCsv(cell)).join(',')).join('\n')
 }
 
 export async function GET(req: Request) {
@@ -34,13 +46,38 @@ export async function GET(req: Request) {
 
   const uploadedMonth = await prisma.memberDataMonth.findUnique({
     where: { period: resolved.period },
-    select: { columns: true, rows: true },
+    select: { rows: true },
   })
 
   if (uploadedMonth) {
-    const columns = Array.isArray(uploadedMonth.columns) ? (uploadedMonth.columns as string[]) : []
-    const rows = Array.isArray(uploadedMonth.rows) ? (uploadedMonth.rows as Array<Record<string, unknown>>) : []
-    const csv = buildMonthCsv(columns, rows)
+    const rawRows = Array.isArray(uploadedMonth.rows) ? (uploadedMonth.rows as Array<Record<string, unknown>>) : []
+
+    const rows = rawRows
+      .map((row) => {
+        const staffId = String(row['Staff ID'] ?? row['Employee No.'] ?? '').trim()
+        if (!staffId) return null
+
+        const name = String(row['Name'] ?? row['Employee Name'] ?? '').trim()
+
+        const thriftSavings =
+          row['Amount'] !== undefined
+            ? toNumber(row['Amount'])
+            : toNumber(row['Thrift Savings']) +
+              toNumber(row['Special Saving']) +
+              toNumber(row['Charges']) +
+              toNumber(row['Monthly Charges']) +
+              toNumber(row['New Member']) +
+              toNumber(row['New Member FEE'])
+
+        return {
+          staffId,
+          name,
+          thriftSavings,
+        }
+      })
+      .filter(Boolean) as Array<{ staffId: string; name: string; thriftSavings: number }>
+
+    const csv = buildThreeColumnCsv(rows)
     const filename = `monthly-deduction-${resolved.period}.csv`
 
     return new NextResponse(`\uFEFF${csv}`, {
@@ -53,7 +90,13 @@ export async function GET(req: Request) {
   }
 
   const dataset = await buildVoucherDataset(resolved.period)
-  const csv = buildVoucherCsv(dataset)
+  const csv = buildThreeColumnCsv(
+    dataset.rows.map((row) => ({
+      staffId: row.staffId,
+      name: row.name,
+      thriftSavings: row.totalSavings,
+    }))
+  )
   const filename = `monthly-deduction-${dataset.period}.csv`
 
   return new NextResponse(`\uFEFF${csv}`, {
