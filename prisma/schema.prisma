@@ -73,6 +73,7 @@ model User {
   withdrawals   Withdrawal[]
   commodityRequests CommodityRequest[]
   payrollLines  PayrollLine[]
+  memberDataMonths MemberDataMonth[] @relation("MemberDataMonthUploader")
 
   @@map("users")
 }
@@ -219,6 +220,23 @@ model PayrollLine {
   @@index([cycleId, userId])
   @@index([cycleId, lineType])
   @@map("payroll_lines")
+}
+
+model MemberDataMonth {
+  id           String   @id @default(cuid())
+  period       String   @unique
+  label        String
+  rowCount     Int      @default(0) @map("row_count")
+  columns      Json
+  rows         Json
+  uploadedById String?  @map("uploaded_by_id")
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  uploadedBy User? @relation("MemberDataMonthUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@map("member_data_months")
 }
 
 model CommodityRequest {

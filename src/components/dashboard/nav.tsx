@@ -60,6 +60,7 @@ const adminNavItems: NavItem[] = [
   { href: '/dashboard/payments', label: 'Payment Verifications', icon: ReceiptText, badge: 'payments' },
   { href: '/dashboard/vouchers', label: 'Generate Voucher', icon: ScrollText },
   { href: '/dashboard/directory', label: 'Update Member', icon: Users },
+  { href: '/dashboard/member-data', label: 'Member Data', icon: FileText },
   { href: '/dashboard/withdrawals', label: 'Withdrawal Requests', icon: ArrowDownUp },
   { href: '/dashboard/commodity', label: 'Commodity Requests', icon: ShoppingBag },
   { href: '/dashboard/finance-report', label: 'Finance Monthly Report', icon: ClipboardList },
