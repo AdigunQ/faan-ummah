@@ -104,6 +104,7 @@ async function createMember(formData: FormData) {
   }
 
   revalidatePath('/dashboard/directory')
+  revalidatePath('/dashboard/member-data')
   revalidatePath('/dashboard/vouchers')
   revalidatePath('/dashboard/finance-report')
   revalidatePath('/dashboard')
@@ -227,4 +228,3 @@ export default async function AddMemberPage({ searchParams }: { searchParams?: S
     </div>
   )
 }
-

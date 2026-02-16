@@ -70,6 +70,10 @@ export function isIncludedInVoucherPeriod(createdAt: Date, voucherPeriod: string
   return firstVoucherPeriodForCreatedAt(createdAt) <= voucherPeriod
 }
 
+function createdMonthPeriod(createdAt: Date): string {
+  return `${createdAt.getUTCFullYear()}-${pad2(createdAt.getUTCMonth() + 1)}`
+}
+
 export async function buildVoucherDataset(periodInput?: string): Promise<VoucherDataset> {
   const { period, start, end } = resolveVoucherPeriod(periodInput)
 
@@ -90,11 +94,10 @@ export async function buildVoucherDataset(periodInput?: string): Promise<Voucher
     orderBy: [{ staffId: 'asc' }, { name: 'asc' }],
   })
 
-  const included = members.filter((member) => isIncludedInVoucherPeriod(member.createdAt, period))
-
-  const rows: VoucherRow[] = included.map((member, index) => {
-    const firstPeriod = firstVoucherPeriodForCreatedAt(member.createdAt)
-    const isNewMember = firstPeriod === period
+  // Admin expectation: once a member is added, they appear immediately in
+  // Member Data / Generate Report for the selected month.
+  const rows: VoucherRow[] = members.map((member, index) => {
+    const isNewMember = createdMonthPeriod(member.createdAt) === period
     const memberFee = isNewMember ? 1000 : 100
     const monthlySavings = member.monthlyContribution || 0
     const specialSavings = member.specialContribution || 0
