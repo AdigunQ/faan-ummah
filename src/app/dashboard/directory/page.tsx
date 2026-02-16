@@ -28,7 +28,6 @@ export default async function DirectoryPage({ searchParams }: { searchParams?: S
       id: true,
       name: true,
       staffId: true,
-      email: true,
       status: true,
       monthlyContribution: true,
       specialContribution: true,
@@ -99,7 +98,6 @@ export default async function DirectoryPage({ searchParams }: { searchParams?: S
                   >
                     {member.name || 'Unnamed Member'}
                   </Link>
-                  <p className="text-sm text-gray-500">{member.email}</p>
                 </td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-800">{member.staffId || 'N/A'}</td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-800">

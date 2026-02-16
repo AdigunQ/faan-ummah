@@ -5,9 +5,23 @@ import { revalidatePath } from 'next/cache'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency } from '@/lib/utils'
+import ConfirmDeleteButton from './confirm-delete-button'
 
 type SearchParams = {
   saved?: string
+  error?: string
+}
+
+function normalizeStaffId(input: string): string {
+  return input.trim().replace(/\s+/g, '').toUpperCase()
+}
+
+function mapSaveError(error?: string): string | null {
+  if (!error) return null
+  if (error === 'invalid_staff') return 'Staff ID must contain only letters, numbers, or hyphen.'
+  if (error === 'duplicate_staff') return 'Staff ID already belongs to another member.'
+  if (error === 'save_failed') return 'Could not save this profile. Please try again.'
+  return 'Could not save this profile.'
 }
 
 async function updateMemberRecord(formData: FormData) {
@@ -17,6 +31,7 @@ async function updateMemberRecord(formData: FormData) {
   if (session?.user?.role !== 'ADMIN') redirect('/dashboard')
 
   const memberId = String(formData.get('memberId') || '')
+  const staffId = normalizeStaffId(String(formData.get('staffId') || ''))
   const monthlyContribution = Number(formData.get('monthlyContribution') || 0)
   const specialContribution = Number(formData.get('specialContribution') || 0)
   const balance = Number(formData.get('balance') || 0)
@@ -24,28 +39,67 @@ async function updateMemberRecord(formData: FormData) {
   const loanBalance = Number(formData.get('loanBalance') || 0)
   const voucherEnabled = String(formData.get('voucherEnabled') || 'true') === 'true'
 
-  if (!memberId) return
-  if (!Number.isFinite(monthlyContribution) || monthlyContribution < 0) return
-  if (!Number.isFinite(specialContribution) || specialContribution < 0) return
-  if (!Number.isFinite(balance) || balance < 0) return
-  if (!Number.isFinite(specialBalance) || specialBalance < 0) return
-  if (!Number.isFinite(loanBalance) || loanBalance < 0) return
+  if (!memberId) redirect('/dashboard/directory')
+  if (!staffId || !/^[A-Z0-9-]+$/.test(staffId)) {
+    redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?error=invalid_staff`)
+  }
+  if (!Number.isFinite(monthlyContribution) || monthlyContribution < 0) {
+    redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?error=save_failed`)
+  }
+  if (!Number.isFinite(specialContribution) || specialContribution < 0) {
+    redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?error=save_failed`)
+  }
+  if (!Number.isFinite(balance) || balance < 0) {
+    redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?error=save_failed`)
+  }
+  if (!Number.isFinite(specialBalance) || specialBalance < 0) {
+    redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?error=save_failed`)
+  }
+  if (!Number.isFinite(loanBalance) || loanBalance < 0) {
+    redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?error=save_failed`)
+  }
 
-  await prisma.user.update({
-    where: { id: memberId },
-    data: {
-      monthlyContribution,
-      specialContribution,
-      balance,
-      specialBalance,
-      loanBalance,
-      voucherEnabled,
+  const conflictingStaffId = await prisma.user.findFirst({
+    where: {
+      staffId,
+      NOT: { id: memberId },
     },
+    select: { id: true },
   })
+  if (conflictingStaffId) {
+    redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?error=duplicate_staff`)
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: memberId },
+        data: {
+          staffId,
+          monthlyContribution,
+          specialContribution,
+          balance,
+          specialBalance,
+          loanBalance,
+          voucherEnabled,
+        },
+      })
+
+      await tx.voucher.updateMany({
+        where: { userId: memberId },
+        data: { staffId },
+      })
+    })
+  } catch {
+    redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?error=save_failed`)
+  }
 
   revalidatePath(`/dashboard/directory/${memberId}`)
   revalidatePath('/dashboard/directory')
   revalidatePath('/dashboard')
+  revalidatePath('/dashboard/vouchers')
+  revalidatePath('/dashboard/finance-report')
+  revalidatePath('/dashboard/member-data')
   redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?saved=1`)
 }
 
@@ -93,7 +147,6 @@ export default async function MemberProfileEditorPage({
     select: {
       id: true,
       name: true,
-      email: true,
       staffId: true,
       phone: true,
       department: true,
@@ -113,6 +166,7 @@ export default async function MemberProfileEditorPage({
 
   if (!member) redirect('/dashboard/directory')
   const justSaved = searchParams?.saved === '1'
+  const saveError = mapSaveError(searchParams?.error)
 
   return (
     <div className="animate-fadeIn space-y-8">
@@ -134,10 +188,14 @@ export default async function MemberProfileEditorPage({
           Saved changes for {member.name || 'member'}.
         </div>
       )}
+      {saveError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">{member.name || 'Unnamed Member'}</h2>
-        <p className="mt-1 text-sm text-gray-500">{member.email}</p>
         <div className="mt-4 grid grid-cols-1 gap-2 text-sm text-gray-600 md:grid-cols-2">
           <p><span className="font-medium text-gray-800">Staff ID:</span> {member.staffId || 'N/A'}</p>
           <p><span className="font-medium text-gray-800">Department:</span> {member.department || 'N/A'}</p>
@@ -156,6 +214,16 @@ export default async function MemberProfileEditorPage({
         <h2 className="text-lg font-semibold text-gray-900">Manual Correction</h2>
         <form action={updateMemberRecord} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <input type="hidden" name="memberId" value={member.id} />
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Staff ID</label>
+            <input
+              name="staffId"
+              required
+              defaultValue={member.staffId || ''}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase outline-none focus:border-primary-500"
+            />
+          </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Monthly Savings Amount</label>
@@ -246,12 +314,7 @@ export default async function MemberProfileEditorPage({
           <p className="mt-1 text-xs text-gray-500">Delete this member and all associated records.</p>
           <form action={deleteMemberRecord} className="mt-3">
             <input type="hidden" name="memberId" value={member.id} />
-            <button
-              type="submit"
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-            >
-              Delete Member
-            </button>
+            <ConfirmDeleteButton memberName={member.name || 'this member'} />
           </form>
         </div>
       </div>
