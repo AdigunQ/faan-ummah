@@ -61,8 +61,19 @@ function isAuthorized(req: Request): boolean {
   const authHeader = req.headers.get('authorization')
   const bearerToken = authHeader?.replace(/^Bearer\s+/i, '').trim()
   const customHeader = req.headers.get('x-webhook-secret')?.trim()
+  let querySecret: string | undefined
 
-  return bearerToken === expectedSecret || customHeader === expectedSecret
+  try {
+    querySecret = new URL(req.url).searchParams.get('secret')?.trim() || undefined
+  } catch {
+    querySecret = undefined
+  }
+
+  return (
+    bearerToken === expectedSecret ||
+    customHeader === expectedSecret ||
+    querySecret === expectedSecret
+  )
 }
 
 export async function POST(req: Request) {

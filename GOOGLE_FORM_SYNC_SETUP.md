@@ -74,7 +74,8 @@ function onFormSubmit(e) {
   };
 
   try {
-    const response = UrlFetchApp.fetch(`${APP_URL}/api/integrations/google-form`, {
+    const endpoint = `${APP_URL}/api/integrations/google-form?secret=${encodeURIComponent(WEBHOOK_SECRET)}`;
+    const response = UrlFetchApp.fetch(endpoint, {
       method: 'post',
       contentType: 'application/json',
       headers: {
