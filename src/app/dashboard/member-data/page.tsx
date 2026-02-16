@@ -13,8 +13,6 @@ type SearchParams = {
 type MonthOption = {
   period: string
   label: string
-  rowCount?: number
-  uploadedAt?: Date
   isUploaded: boolean
 }
 
@@ -26,33 +24,16 @@ export default async function MemberDataPage({ searchParams }: { searchParams?: 
 
   const months = await prisma.memberDataMonth.findMany({
     orderBy: { period: 'asc' },
-    select: { period: true, label: true, rowCount: true, uploadedAt: true },
+    select: { period: true, label: true },
   })
 
   const selectedPeriod = resolveVoucherPeriod(searchParams?.period).period
-
-  const selectedUploadedMonth = await prisma.memberDataMonth.findUnique({
-    where: { period: selectedPeriod },
-    select: { period: true, label: true, rowCount: true, uploadedAt: true, columns: true, rows: true },
-  })
-
-  const uploadedColumns =
-    selectedUploadedMonth && Array.isArray(selectedUploadedMonth.columns)
-      ? (selectedUploadedMonth.columns as string[])
-      : []
-
-  const uploadedRows =
-    selectedUploadedMonth && Array.isArray(selectedUploadedMonth.rows)
-      ? (selectedUploadedMonth.rows as Array<Record<string, unknown>>)
-      : []
 
   const liveDataset = await buildVoucherDataset(selectedPeriod)
 
   const monthOptions: MonthOption[] = months.map((month) => ({
     period: month.period,
     label: month.label,
-    rowCount: month.rowCount,
-    uploadedAt: month.uploadedAt,
     isUploaded: true,
   }))
 
@@ -72,7 +53,7 @@ export default async function MemberDataPage({ searchParams }: { searchParams?: 
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Member Data</h1>
           <p className="mt-1 text-gray-500">
-            Live member data is always in sync with newly added members. Uploaded snapshots are shown below when available.
+            Live member data is always in sync with newly added members.
           </p>
         </div>
 
@@ -161,59 +142,8 @@ export default async function MemberDataPage({ searchParams }: { searchParams?: 
           </div>
         )}
       </div>
-
-      {selectedUploadedMonth ? (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-200 px-6 py-4">
-            <h2 className="text-lg font-semibold text-gray-900">Uploaded Snapshot ({selectedUploadedMonth.label})</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              {selectedUploadedMonth.rowCount.toLocaleString()} rows • Last upload:{' '}
-              {new Date(selectedUploadedMonth.uploadedAt).toLocaleString()}
-            </p>
-          </div>
-
-          {uploadedRows.length === 0 ? (
-            <div className="px-6 py-10 text-center text-gray-500">No rows in uploaded snapshot for this period.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[920px] text-sm">
-                <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-                  <tr>
-                    {uploadedColumns.map((col) => (
-                      <th key={col} className="px-6 py-3">
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {uploadedRows.map((row, idx) => (
-                    <tr key={idx}>
-                      {uploadedColumns.map((col) => (
-                        <td key={col} className="px-6 py-3 text-gray-800">
-                          {formatCell(row[col])}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-          No uploaded snapshot for {selectedPeriod}. Live data above is the current source of truth.
-        </div>
-      )}
     </div>
   )
-}
-
-function formatCell(value: unknown) {
-  if (value === null || value === undefined || value === '') return '—'
-  if (typeof value === 'number' && Number.isFinite(value)) return value.toLocaleString()
-  return String(value)
 }
 
 function MetricCard({
