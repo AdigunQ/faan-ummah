@@ -49,6 +49,34 @@ async function updateMemberRecord(formData: FormData) {
   redirect(`/dashboard/directory/${encodeURIComponent(memberId)}?saved=1`)
 }
 
+async function deleteMemberRecord(formData: FormData) {
+  'use server'
+
+  const session = await getServerSession(authOptions)
+  if (session?.user?.role !== 'ADMIN') redirect('/dashboard')
+
+  const memberId = String(formData.get('memberId') || '')
+  if (!memberId) redirect('/dashboard/directory?deleteError=1')
+
+  const deleted = await prisma.user.deleteMany({
+    where: {
+      id: memberId,
+      role: 'MEMBER',
+    },
+  })
+
+  if (deleted.count < 1) {
+    redirect('/dashboard/directory?deleteError=1')
+  }
+
+  revalidatePath('/dashboard/directory')
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/vouchers')
+  revalidatePath('/dashboard/finance-report')
+  revalidatePath('/dashboard/member-data')
+  redirect('/dashboard/directory?deleted=1')
+}
+
 export default async function MemberProfileEditorPage({
   params,
   searchParams,
@@ -212,6 +240,20 @@ export default async function MemberProfileEditorPage({
             </button>
           </div>
         </form>
+
+        <div className="mt-6 border-t border-red-100 pt-5">
+          <p className="text-sm font-medium text-gray-800">Danger Zone</p>
+          <p className="mt-1 text-xs text-gray-500">Delete this member and all associated records.</p>
+          <form action={deleteMemberRecord} className="mt-3">
+            <input type="hidden" name="memberId" value={member.id} />
+            <button
+              type="submit"
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Delete Member
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )

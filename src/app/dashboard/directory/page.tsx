@@ -5,7 +5,12 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatCurrency } from '@/lib/utils'
 
-export default async function DirectoryPage() {
+type SearchParams = {
+  deleted?: string
+  deleteError?: string
+}
+
+export default async function DirectoryPage({ searchParams }: { searchParams?: SearchParams }) {
   const session = await getServerSession(authOptions)
 
   if (!session?.user?.email) {
@@ -50,6 +55,18 @@ export default async function DirectoryPage() {
           Add new member
         </Link>
       </div>
+
+      {searchParams?.deleted === '1' && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Member deleted successfully.
+        </div>
+      )}
+
+      {searchParams?.deleteError === '1' && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Could not delete member. Please try again.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <MetricCard label="Approved Members" value={members.length.toString()} tone="blue" />
