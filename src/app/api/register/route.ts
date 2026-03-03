@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { checkRateLimit, getRequestIp } from '@/lib/rate-limit'
 
 const registerPayloadSchema = z.object({
   name: z.string().trim().min(1),
@@ -18,6 +19,19 @@ const registerPayloadSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    const ip = getRequestIp(req)
+    const rateLimit = checkRateLimit({
+      key: `register:${ip}`,
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    })
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429 }
+      )
+    }
+
     const parsed = registerPayloadSchema.safeParse(await req.json())
     if (!parsed.success) {
       return NextResponse.json(

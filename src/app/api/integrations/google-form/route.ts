@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { checkRateLimit, getRequestIp } from '@/lib/rate-limit'
 
 const integrationPayloadSchema = z.object({
   fullName: z.string().trim().min(1),
@@ -78,6 +79,16 @@ function isAuthorized(req: Request): boolean {
 
 export async function POST(req: Request) {
   try {
+    const ip = getRequestIp(req)
+    const rateLimit = checkRateLimit({
+      key: `google-form:${ip}`,
+      limit: 120,
+      windowMs: 60 * 1000,
+    })
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })
+    }
+
     if (!process.env.GOOGLE_FORM_WEBHOOK_SECRET?.trim()) {
       return NextResponse.json(
         { error: 'GOOGLE_FORM_WEBHOOK_SECRET is not configured on server.' },

@@ -2,8 +2,18 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const secret = process.env.ADMIN_MAINTENANCE_SECRET?.trim()
+    if (!secret) {
+      return NextResponse.json({ success: false, error: 'Maintenance endpoint disabled.' }, { status: 503 })
+    }
+
+    const requestSecret = req.headers.get('x-admin-secret')?.trim()
+    if (!requestSecret || requestSecret !== secret) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
     const adminPassword = await bcrypt.hash('admin123', 10)
     const memberPassword = await bcrypt.hash('member123', 10)
     
